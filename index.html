@@ -46,6 +46,8 @@
   .btn.green{background:var(--grass);box-shadow:0 6px 0 #2f9249}
   .btn.green:active{box-shadow:0 2px 0 #2f9249}
   .btn.big{font-size:22px;padding:18px 30px}
+  .btn.small{font-size:15px;padding:9px 15px;border-radius:13px;box-shadow:0 4px 0 #cfe2fb}
+  .btn.small:active{box-shadow:0 2px 0 #cfe2fb}
   .btn:disabled{opacity:.55;cursor:default;box-shadow:none;transform:none}
 
   /* Start screen mode tiles */
@@ -106,6 +108,9 @@
   @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
 
   .navrow{display:flex;justify-content:flex-end;margin-top:18px}
+  .topbar{display:flex;justify-content:flex-start;margin-bottom:10px}
+  #resumebox{margin-top:14px}
+  #resumebox .btn{width:100%;max-width:520px}
 
   /* Result */
   .gauge{display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0 6px}
@@ -155,6 +160,7 @@
       zobaczysz swój wynik w procentach. Do zdania trzeba <b>80%</b> — dasz radę! 💪
     </p>
     <div id="bestbox"></div>
+    <div id="resumebox"></div>
     <div class="modes" id="modes">
       <button class="mode" data-mode="exam">
         <span class="ico">📝</span>
@@ -174,11 +180,15 @@
       </button>
     </div>
     <p class="footnote">Sterowanie: kliknij odpowiedź albo użyj klawiszy <span class="kbd">1</span>
-      <span class="kbd">2</span> <span class="kbd">3</span>, a potem <span class="kbd">Enter</span> by przejść dalej.</p>
+      <span class="kbd">2</span> <span class="kbd">3</span>, a potem <span class="kbd">Enter</span> by przejść dalej.
+      Klawisz <span class="kbd">Esc</span> (lub przycisk <b>← Menu</b>) wraca do menu — egzamin możesz potem wznowić.</p>
   </section>
 
   <!-- ============ EKRAN PYTANIA ============ -->
   <section id="screen-quiz" class="card hidden">
+    <div class="topbar">
+      <button class="btn alt small" id="quit">← Menu</button>
+    </div>
     <div class="roadwrap">
       <div class="meta">
         <span id="counter">Pytanie 1 / 25</span>
@@ -721,7 +731,7 @@ function pickExam(n){
 function pickFrom(filterFn,n){ const pool=shuffle(QUESTIONS.filter(filterFn)); return pool.slice(0,Math.min(n,pool.length)); }
 
 // stan
-let exam=[], idx=0, answers=[], streak=0, maxStreak=0, currentMode='exam';
+let exam=[], idx=0, answers=[], streak=0, maxStreak=0, currentMode='exam', paused=false;
 
 function startMode(mode){
   currentMode=mode;
@@ -736,7 +746,7 @@ function startExam(list){
     const order=shuffle([0,1,2]);
     return {...q,_opts:order.map(i=>q.options[i]),_correct:order.indexOf(q.correct)};
   });
-  idx=0; answers=[]; streak=0; maxStreak=0;
+  idx=0; answers=[]; streak=0; maxStreak=0; paused=false;
   show('quiz'); renderQ(); saveState();
 }
 
@@ -862,12 +872,14 @@ $('#redo').onclick=()=>{
   if(!wrongs.length){ startMode(currentMode); return; }
   startExam(wrongs);
 };
-$('#home').onclick=()=>{ refreshBest(); show('start'); saveState(); };
+$('#home').onclick=()=>backToMenu(true);
+$('#quit').onclick=()=>backToMenu(false);
 
 document.addEventListener('keydown',e=>{
   if(!screens.quiz.classList.contains('hidden')){
     if(['1','2','3'].includes(e.key)){ const i=+e.key-1; const b=document.querySelector(`.opt[data-i="${i}"]`); if(b&&answers[idx]===undefined) answer(i); }
     if((e.key==='Enter'||e.key===' ')&&!$('#next').classList.contains('hidden')){ e.preventDefault(); nextQ(); }
+    if(e.key==='Escape'){ backToMenu(false); } // wyjście do menu (egzamin do wznowienia)
   }
 });
 
@@ -886,9 +898,10 @@ function currentScreen(){
 function saveState(){
   try{
     const screen=currentScreen();
-    if(screen==='start'){ clearState(); return; } // menu = nie ma czego wznawiać
+    // na ekranie startowym trzymamy zapis tylko, gdy jest wstrzymany egzamin do wznowienia
+    if(screen==='start' && !(paused && exam.length)){ clearState(); return; }
     localStorage.setItem(SAVE_KEY, JSON.stringify({
-      v:SAVE_VER, t:Date.now(), screen, currentMode, idx, exam, answers, streak, maxStreak
+      v:SAVE_VER, t:Date.now(), screen, paused, currentMode, idx, exam, answers, streak, maxStreak
     }));
   }catch(e){}
 }
@@ -900,20 +913,39 @@ function restoreState(){
     if(!d || d.v!==SAVE_VER){ clearState(); return false; }
     if(!d.t || (Date.now()-d.t)>SAVE_TTL){ clearState(); return false; } // za stare — zaczynamy świeżo
     if(!Array.isArray(d.exam) || !d.exam.length) return false;
-    if(d.screen!=='quiz' && d.screen!=='result') return false;
     exam=d.exam;
     // JSON zamienia dziury w tablicy na null — wracamy do undefined, bo tak sprawdzamy "bez odpowiedzi"
     answers=Array.isArray(d.answers)?d.answers.map(x=>x==null?undefined:x):[];
     idx=Math.max(0,Math.min(d.idx|0, exam.length-1));
-    streak=d.streak|0; maxStreak=d.maxStreak|0; currentMode=d.currentMode||'exam';
-    if(d.screen==='result') finish(true);
-    else { show('quiz'); renderQ(); }
-    return true;
+    streak=d.streak|0; maxStreak=d.maxStreak|0; currentMode=d.currentMode||'exam'; paused=!!d.paused;
+    if(d.screen==='result'){ finish(true); return true; }
+    if(d.screen==='quiz'){ show('quiz'); renderQ(); return true; }
+    return false; // ekran startowy z wstrzymanym egzaminem — menu pokaże przycisk wznowienia
   }catch(e){ clearState(); return false; }
 }
 
+// przycisk „wróć do przerwanego egzaminu" na ekranie startowym
+function refreshResume(){
+  const el=$('#resumebox'); if(!el) return;
+  if(currentScreen()==='start' && paused && exam.length){
+    const n=Math.min(idx+1, exam.length);
+    el.innerHTML=`<button class="btn big green" id="resumebtn">▶ Wróć do egzaminu — pytanie ${n} z ${exam.length}</button>`;
+    $('#resumebtn').onclick=resumeQuiz;
+  } else el.innerHTML='';
+}
+function resumeQuiz(){
+  if(!exam.length) return;
+  paused=false; show('quiz'); renderQ(); saveState(); refreshResume();
+}
+// przerwij aktywność i wróć do menu (egzamin pozostaje do wznowienia; wynik = koniec, czyścimy)
+function backToMenu(fromResult){
+  paused = !fromResult;
+  show('start'); refreshBest(); saveState(); refreshResume();
+}
+
 refreshBest();
-if(!restoreState()) show('start'); // wznów grę jeśli był zapis, inaczej menu
+if(!restoreState()) show('start'); // wznów aktywność jeśli był zapis, inaczej menu
+refreshResume();
 </script>
 </body>
 </html>
