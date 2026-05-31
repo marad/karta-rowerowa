@@ -737,7 +737,7 @@ function startExam(list){
     return {...q,_opts:order.map(i=>q.options[i]),_correct:order.indexOf(q.correct)};
   });
   idx=0; answers=[]; streak=0; maxStreak=0;
-  show('quiz'); renderQ();
+  show('quiz'); renderQ(); saveState();
 }
 
 function renderQ(){
@@ -759,23 +759,30 @@ function renderQ(){
   const fb=$('#feedback'); fb.className='feedback'; fb.classList.remove('show');
   $('#next').classList.add('hidden');
   $('#next').textContent = (idx===exam.length-1)?'Zobacz wynik 🏁':'Dalej →';
+  if(answers[idx]!==undefined) paintAnswered(answers[idx]); // odtwórz stan odpowiedzi po refreshu
 }
 
 function answer(i){
-  const q=exam[idx];
   if(answers[idx]!==undefined) return; // już odpowiedziano
-  const correct=q._correct;
   answers[idx]=i;
-  const good=i===correct;
+  const good=i===exam[idx]._correct;
   if(good){ streak++; maxStreak=Math.max(maxStreak,streak);} else streak=0;
   $('#streak').textContent=`🔥 ${streak} z rzędu`;
-  // oznacz opcje
+  paintAnswered(i);
+  $('#next').focus();
+  saveState();
+}
+
+// pokaż wizualny stan odpowiedzi (bez zmiany stanu gry) — używane też przy odtworzeniu z localStorage
+function paintAnswered(chosen){
+  const q=exam[idx];
+  const correct=q._correct;
+  const good=chosen===correct;
   document.querySelectorAll('.opt').forEach(b=>{
     const bi=+b.dataset.i; b.classList.add('locked');
     if(bi===correct) b.classList.add('correct');
-    else if(bi===i) b.classList.add('wrong');
+    else if(bi===chosen) b.classList.add('wrong');
   });
-  // feedback
   const fb=$('#feedback');
   fb.classList.add('show', good?'good':'bad');
   const cheersGood=['Świetnie! 🎉','Brawo! 👏','Tak jest! ✅','Super! 🚀','Pięknie! 🌟'];
@@ -784,16 +791,15 @@ function answer(i){
                                  : cheersBad[Math.floor(Math.random()*cheersBad.length)];
   $('#fbody').innerHTML = (good?'':`<b>Poprawna odpowiedź:</b> ${q._opts[correct]}<br>`)+q.explanation;
   $('#next').classList.remove('hidden');
-  $('#next').focus();
 }
 
 function nextQ(){
   if(answers[idx]===undefined) return;
-  if(idx<exam.length-1){ idx++; renderQ(); }
+  if(idx<exam.length-1){ idx++; renderQ(); saveState(); }
   else finish();
 }
 
-function finish(){
+function finish(restored){
   const total=exam.length;
   const correct=exam.reduce((s,q,i)=>s+(answers[i]===q._correct?1:0),0);
   const pct=Math.round(correct/total*100);
@@ -812,7 +818,8 @@ function finish(){
   try{ const best=+(localStorage.getItem('kr_best')||0); if(pct>best) localStorage.setItem('kr_best',pct);}catch(e){}
   buildReview();
   show('result');
-  if(pass) confetti();
+  if(pass && !restored) confetti(); // nie odpalaj konfetti przy odtworzeniu z localStorage
+  saveState();
 }
 
 function buildReview(){
@@ -855,7 +862,7 @@ $('#redo').onclick=()=>{
   if(!wrongs.length){ startMode(currentMode); return; }
   startExam(wrongs);
 };
-$('#home').onclick=()=>{ refreshBest(); show('start'); };
+$('#home').onclick=()=>{ refreshBest(); show('start'); saveState(); };
 
 document.addEventListener('keydown',e=>{
   if(!screens.quiz.classList.contains('hidden')){
@@ -868,8 +875,45 @@ function refreshBest(){
   let best=0; try{best=+(localStorage.getItem('kr_best')||0);}catch(e){}
   $('#bestbox').innerHTML = best>0 ? `<div class="best">🏅 Twój najlepszy wynik: ${best}%</div>`:'';
 }
+
+/* ---- zapis stanu w localStorage: refresh albo chwilowe wyjście nie resetuje gry ---- */
+const SAVE_KEY='kr_state', SAVE_VER=1, SAVE_TTL=12*60*60*1000; // ważne 12 h
+function currentScreen(){
+  if(!screens.quiz.classList.contains('hidden')) return 'quiz';
+  if(!screens.result.classList.contains('hidden')) return 'result';
+  return 'start';
+}
+function saveState(){
+  try{
+    const screen=currentScreen();
+    if(screen==='start'){ clearState(); return; } // menu = nie ma czego wznawiać
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      v:SAVE_VER, t:Date.now(), screen, currentMode, idx, exam, answers, streak, maxStreak
+    }));
+  }catch(e){}
+}
+function clearState(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function restoreState(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY); if(!raw) return false;
+    const d=JSON.parse(raw);
+    if(!d || d.v!==SAVE_VER){ clearState(); return false; }
+    if(!d.t || (Date.now()-d.t)>SAVE_TTL){ clearState(); return false; } // za stare — zaczynamy świeżo
+    if(!Array.isArray(d.exam) || !d.exam.length) return false;
+    if(d.screen!=='quiz' && d.screen!=='result') return false;
+    exam=d.exam;
+    // JSON zamienia dziury w tablicy na null — wracamy do undefined, bo tak sprawdzamy "bez odpowiedzi"
+    answers=Array.isArray(d.answers)?d.answers.map(x=>x==null?undefined:x):[];
+    idx=Math.max(0,Math.min(d.idx|0, exam.length-1));
+    streak=d.streak|0; maxStreak=d.maxStreak|0; currentMode=d.currentMode||'exam';
+    if(d.screen==='result') finish(true);
+    else { show('quiz'); renderQ(); }
+    return true;
+  }catch(e){ clearState(); return false; }
+}
+
 refreshBest();
-show('start');
+if(!restoreState()) show('start'); // wznów grę jeśli był zapis, inaczej menu
 </script>
 </body>
 </html>
