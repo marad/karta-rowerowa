@@ -752,7 +752,9 @@ function startExam(list){
 
 function renderQ(){
   const q=exam[idx];
-  window.scrollTo({top:0,behavior:'smooth'}); // pokaż całe pytanie od góry po przejściu dalej
+  // przewiń tak, by na górze był pasek postępu (a nie topbar z „Menu") — widać wtedy więcej odpowiedzi
+  const rw=document.querySelector('.roadwrap');
+  if(rw){ const y=rw.getBoundingClientRect().top + window.scrollY - 6; window.scrollTo({top:Math.max(0,y),behavior:'smooth'}); }
   $('#counter').textContent=`Pytanie ${idx+1} / ${exam.length}`;
   $('#streak').textContent=`🔥 ${streak} z rzędu`;
   $('#bike').style.left=(6+ (idx/Math.max(1,exam.length))*88)+'%';
