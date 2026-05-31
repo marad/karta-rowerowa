@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🚲 Karta Rowerowa — Egzamin próbny</title>
+<style>
+  :root{
+    --sky:#4aa3ff; --sky-d:#1f6fd6; --grass:#43b85f; --sun:#ffd21e;
+    --ink:#1f2933; --paper:#ffffff; --soft:#f1f6ff; --soft2:#e6eefb;
+    --ok:#27ae60; --ok-bg:#e7f9ee; --bad:#e23b3b; --bad-bg:#fdeaea;
+    --shadow:0 10px 30px rgba(31,111,214,.15);
+    --radius:22px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    background:linear-gradient(180deg,#bfe2ff 0%, #e9f4ff 40%, #eafbef 100%);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:18px 16px 60px}
+  .card{
+    background:var(--paper);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:26px;margin:0 auto;
+  }
+  h1{font-size:30px;margin:.2em 0 .1em;line-height:1.15}
+  h2{font-size:22px;margin:.2em 0 .4em}
+  .muted{color:#5b6b7b}
+  .center{text-align:center}
+  .hidden{display:none !important}
+
+  /* Buttons */
+  button{font-family:inherit;cursor:pointer;border:none}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:.5em;
+    background:var(--sky);color:#fff;font-weight:800;font-size:18px;
+    padding:14px 22px;border-radius:16px;box-shadow:0 6px 0 var(--sky-d);
+    transition:transform .05s ease, box-shadow .05s ease;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--sky-d)}
+  .btn.alt{background:#fff;color:var(--sky-d);border:3px solid var(--sky);box-shadow:0 6px 0 #cfe2fb}
+  .btn.alt:active{box-shadow:0 2px 0 #cfe2fb}
+  .btn.green{background:var(--grass);box-shadow:0 6px 0 #2f9249}
+  .btn.green:active{box-shadow:0 2px 0 #2f9249}
+  .btn.big{font-size:22px;padding:18px 30px}
+  .btn:disabled{opacity:.55;cursor:default;box-shadow:none;transform:none}
+
+  /* Start screen mode tiles */
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+  @media(max-width:560px){.modes{grid-template-columns:1fr}}
+  .mode{
+    text-align:left;background:var(--soft);border:3px solid transparent;border-radius:18px;
+    padding:18px;display:flex;gap:14px;align-items:flex-start;transition:.12s;
+  }
+  .mode:hover{border-color:var(--sky);background:#fff;transform:translateY(-2px)}
+  .mode .ico{font-size:34px;line-height:1}
+  .mode>span:last-child{display:block}
+  .mode .t{display:block;font-weight:800;font-size:18px;line-height:1.2}
+  .mode .d{display:block;font-size:14px;color:#5b6b7b;margin-top:3px;line-height:1.3}
+
+  .best{display:inline-block;margin-top:14px;background:var(--sun);color:#4a3c00;font-weight:800;
+        padding:8px 14px;border-radius:999px}
+
+  /* Progress road */
+  .roadwrap{margin:4px 0 18px}
+  .meta{display:flex;justify-content:space-between;align-items:center;font-weight:800;color:#5b6b7b;font-size:14px;margin-bottom:8px}
+  .streak{background:#fff3d6;color:#7a5b00;padding:4px 10px;border-radius:999px}
+  .road{position:relative;height:30px;background:#5b6b7b;border-radius:999px;overflow:hidden}
+  .road:before{content:"";position:absolute;top:50%;left:0;right:0;height:4px;transform:translateY(-50%);
+    background:repeating-linear-gradient(90deg,#ffd21e 0 18px,transparent 18px 34px)}
+  .bike{position:absolute;top:-9px;font-size:26px;transition:left .4s cubic-bezier(.4,1.3,.5,1);transform:translateX(-50%)}
+  .flag{position:absolute;right:6px;top:2px;font-size:22px}
+
+  /* Question */
+  .qcat{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+        color:var(--sky-d);background:var(--soft2);padding:5px 12px;border-radius:999px}
+  .qtext{font-size:22px;font-weight:800;line-height:1.3;margin:14px 0 6px}
+  .assetbox{display:flex;justify-content:center;margin:10px 0 6px}
+  .assetbox svg{filter:drop-shadow(0 6px 12px rgba(0,0,0,.12))}
+
+  .opts{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+  .opt{
+    display:flex;align-items:center;gap:14px;text-align:left;width:100%;
+    background:var(--soft);border:3px solid #dfe8f6;border-radius:16px;padding:16px 18px;
+    font-size:18px;font-weight:600;color:var(--ink);transition:.1s;
+  }
+  .opt:hover:not(.locked){border-color:var(--sky);background:#fff}
+  .opt .key{flex:0 0 34px;height:34px;border-radius:10px;background:#fff;border:2px solid #cdd9ec;
+            display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--sky-d)}
+  .opt.correct{background:var(--ok-bg);border-color:var(--ok);color:#176c3a}
+  .opt.correct .key{background:var(--ok);border-color:var(--ok);color:#fff}
+  .opt.wrong{background:var(--bad-bg);border-color:var(--bad);color:#9b1c1c}
+  .opt.wrong .key{background:var(--bad);border-color:var(--bad);color:#fff}
+  .opt.locked{cursor:default}
+
+  .feedback{margin-top:16px;border-radius:16px;padding:16px 18px;font-size:16px;display:none}
+  .feedback.show{display:block;animation:pop .25s ease}
+  .feedback.good{background:var(--ok-bg);border:2px solid #b7e7c8}
+  .feedback.bad{background:var(--bad-bg);border:2px solid #f3c4c4}
+  .feedback .head{font-weight:900;font-size:18px;margin-bottom:4px}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+
+  .navrow{display:flex;justify-content:flex-end;margin-top:18px}
+
+  /* Result */
+  .gauge{display:flex;flex-direction:column;align-items:center;gap:6px;margin:8px 0 6px}
+  .ring{position:relative;width:200px;height:200px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .ring .inner{position:absolute;width:158px;height:158px;background:#fff;border-radius:50%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .pct{font-size:48px;font-weight:900;line-height:1}
+  .ring .sub{font-size:14px;color:#5b6b7b;font-weight:700}
+  .verdict{font-size:24px;font-weight:900;margin-top:6px}
+  .verdict.pass{color:var(--ok)}
+  .verdict.fail{color:var(--bad)}
+  .scorebits{display:flex;gap:12px;justify-content:center;margin:14px 0;flex-wrap:wrap}
+  .pill{background:var(--soft);border-radius:14px;padding:10px 16px;font-weight:800}
+  .pill.ok{background:var(--ok-bg);color:#176c3a}
+  .pill.bad{background:var(--bad-bg);color:#9b1c1c}
+  .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:10px}
+
+  .review{margin-top:26px}
+  .rev{background:var(--soft);border-radius:16px;padding:16px;margin-bottom:12px}
+  .rev .rq{font-weight:800;margin-bottom:8px}
+  .rev .line{font-size:15px;margin:3px 0}
+  .rev .yours{color:#9b1c1c;font-weight:700}
+  .rev .right{color:#176c3a;font-weight:700}
+  .rev .why{color:#42526a;margin-top:6px;font-size:14px}
+  .rev .miniasset{float:right;margin:0 0 8px 12px}
+
+  /* Confetti */
+  #confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50}
+  .conf{position:absolute;width:10px;height:14px;border-radius:2px;animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:1}}
+
+  .footnote{font-size:12px;color:#7e8a98;margin-top:26px;text-align:center;line-height:1.5}
+  .kbd{display:inline-block;background:#fff;border:1px solid #cdd9ec;border-bottom-width:2px;border-radius:6px;
+       padding:0 6px;font-weight:800;font-size:12px;color:#5b6b7b}
+</style>
+</head>
+<body>
+<div id="confetti"></div>
+<div class="wrap">
+
+  <!-- ============ EKRAN STARTU ============ -->
+  <section id="screen-start" class="card center">
+    <div style="font-size:64px;line-height:1">🚲</div>
+    <h1>Karta Rowerowa — Egzamin próbny</h1>
+    <p class="muted" style="font-size:18px;max-width:520px;margin:6px auto 0">
+      Cześć! Sprawdźmy, czy jesteś gotowy na egzamin. Odpowiadaj na pytania, a na końcu
+      zobaczysz swój wynik w procentach. Do zdania trzeba <b>80%</b> — dasz radę! 💪
+    </p>
+    <div id="bestbox"></div>
+    <div class="modes" id="modes">
+      <button class="mode" data-mode="exam">
+        <span class="ico">📝</span>
+        <span><span class="t">Egzamin próbny</span><span class="d">25 pytań, tak jak na prawdziwym egzaminie</span></span>
+      </button>
+      <button class="mode" data-mode="quick">
+        <span class="ico">⚡</span>
+        <span><span class="t">Szybka rozgrzewka</span><span class="d">10 losowych pytań na początek</span></span>
+      </button>
+      <button class="mode" data-mode="signs">
+        <span class="ico">🚸</span>
+        <span><span class="t">Trening znaków</span><span class="d">tylko pytania o znaki drogowe</span></span>
+      </button>
+      <button class="mode" data-mode="priority">
+        <span class="ico">🚦</span>
+        <span><span class="t">Kto pierwszy?</span><span class="d">ćwiczenie pierwszeństwa na skrzyżowaniach</span></span>
+      </button>
+    </div>
+    <p class="footnote">Sterowanie: kliknij odpowiedź albo użyj klawiszy <span class="kbd">1</span>
+      <span class="kbd">2</span> <span class="kbd">3</span>, a potem <span class="kbd">Enter</span> by przejść dalej.</p>
+  </section>
+
+  <!-- ============ EKRAN PYTANIA ============ -->
+  <section id="screen-quiz" class="card hidden">
+    <div class="roadwrap">
+      <div class="meta">
+        <span id="counter">Pytanie 1 / 25</span>
+        <span class="streak" id="streak">🔥 0 z rzędu</span>
+      </div>
+      <div class="road">
+        <span class="bike" id="bike">🚲</span>
+        <span class="flag">🏁</span>
+      </div>
+    </div>
+
+    <span class="qcat" id="qcat">Zasady</span>
+    <div class="assetbox" id="assetbox"></div>
+    <div class="qtext" id="qtext">…</div>
+
+    <div class="opts" id="opts"></div>
+
+    <div class="feedback" id="feedback">
+      <div class="head" id="fhead"></div>
+      <div id="fbody"></div>
+    </div>
+
+    <div class="navrow">
+      <button class="btn green hidden" id="next">Dalej →</button>
+    </div>
+  </section>
+
+  <!-- ============ EKRAN WYNIKU ============ -->
+  <section id="screen-result" class="card center hidden">
+    <div class="gauge">
+      <div class="ring" id="ring">
+        <div class="inner">
+          <span class="pct" id="rpct">0%</span>
+          <span class="sub" id="rsub">0 / 0 pytań</span>
+        </div>
+      </div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+    <p id="rmsg" class="muted" style="font-size:18px;max-width:520px;margin:4px auto 0"></p>
+    <div class="scorebits">
+      <span class="pill ok" id="pillok">✓ 0 poprawnych</span>
+      <span class="pill bad" id="pillbad">✗ 0 błędnych</span>
+    </div>
+    <div class="actions">
+      <button class="btn big green" id="again">Zagraj jeszcze raz</button>
+      <button class="btn alt" id="redo">Powtórz tylko błędy</button>
+      <button class="btn alt" id="home">Menu</button>
+    </div>
+    <div class="review" id="review"></div>
+  </section>
+
+  <p class="footnote">
+    Materiały do nauki teorii na <b>kartę rowerową</b> (stan na 2026 r.). Zakres: przepisy ruchu,
+    znaki i sygnały, pierwszeństwo, manewry, wyposażenie roweru, pierwsza pomoc i bezpieczeństwo.<br>
+    To narzędzie do ćwiczeń — na prawdziwym egzaminie pytania mogą się różnić.
+  </p>
+</div>
+
+<script>
+/* =================================================================
+   GRAFIKA: ZNAKI DROGOWE (SVG)
+   Znaki ostrzegawcze: żółte tło, czerwona obwódka, czarny symbol.
+   Zakazu: białe koło, czerwona obwódka. Nakazu: niebieskie koło.
+   ================================================================= */
+const C_BLACK="#16191d", C_RED="#E2231A", C_YEL="#F7C815", C_BLUE="#0E5AA7", C_WHITE="#ffffff";
+
+function svg(inner, size){ size=size||150;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img">${inner}</svg>`; }
+
+// Trójkąt ostrzegawczy (wierzchołek u góry)
+function triUp(symbol){
+  return `<path d="M60 12 L113 104 L7 104 Z" fill="${C_YEL}" stroke="${C_RED}" stroke-width="9" stroke-linejoin="round"/>${symbol}`;
+}
+// Trójkąt "ustąp" (wierzchołek na dole, białe tło)
+function triDown(symbol){
+  return `<path d="M8 18 L112 18 L60 108 Z" fill="${C_WHITE}" stroke="${C_RED}" stroke-width="9" stroke-linejoin="round"/>${symbol||""}`;
+}
+// Koło zakazu (białe, czerwona obwódka)
+function circBan(symbol){
+  return `<circle cx="60" cy="60" r="52" fill="${C_WHITE}" stroke="${C_RED}" stroke-width="10"/>${symbol}`;
+}
+// Koło nakazu (niebieskie)
+function circOrder(symbol){
+  return `<circle cx="60" cy="60" r="54" fill="${C_BLUE}"/>${symbol}`;
+}
+// Kwadrat informacyjny (niebieski)
+function sqInfo(symbol){
+  return `<rect x="8" y="8" width="104" height="104" rx="8" fill="${C_BLUE}"/>${symbol}`;
+}
+
+// Rower (do umieszczenia, kolor i translacja parametryczne)
+function bike(color,tx,ty,sc){
+  sc=sc||1; tx=tx||0; ty=ty||0;
+  const g=`<g fill="none" stroke="${color}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="40" cy="74" r="13"/><circle cx="80" cy="74" r="13"/>
+    <path d="M40 74 L58 74 L52 50 L76 50 L80 74 L58 74 M52 50 L80 74"/>
+    <path d="M68 47 L80 49"/><path d="M46 50 L60 50"/>
+  </g>`;
+  return `<g transform="translate(${tx} ${ty}) scale(${sc})" transform-origin="60 60">${g}</g>`;
+}
+
+// Dwoje dzieci (A-17) — czarne sylwetki (rysowane liniami → czytelne)
+function children(){
+  return `<g fill="${C_BLACK}" stroke="${C_BLACK}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="46" cy="58" r="5.5" stroke="none"/>
+    <path d="M46 63 L48 80 M40 70 L53 66 M48 80 L41 95 M48 80 L56 93" fill="none"/>
+    <circle cx="75" cy="51" r="6.5" stroke="none"/>
+    <path d="M75 57 L78 78 M67 67 L84 62 M78 78 L69 95 M78 78 L86 92" fill="none"/>
+  </g>`;
+}
+
+// Pieszy — sylwetka rysowana liniami
+function pedestrian(x,y,sc,color){
+  sc=sc||1;color=color||C_BLACK;
+  return `<g transform="translate(${x} ${y}) scale(${sc})" stroke="${color}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <circle cx="0" cy="-24" r="6" fill="${color}" stroke="none"/>
+    <path d="M0 -18 L0 2 M-9 -10 L9 -12 M0 2 L-8 18 M0 2 L8 18"/>
+  </g>`;
+}
+
+const SIGNS = {
+  a17: ()=> svg(triUp(`<g transform="translate(0 14) scale(.92)" transform-origin="60 70">${children()}</g>`)),
+  a24: ()=> svg(triUp(bike(C_BLACK,0,16,.86))),
+  a30: ()=> svg(triUp(`<rect x="55" y="48" width="10" height="32" rx="3" fill="${C_BLACK}"/><circle cx="60" cy="92" r="6" fill="${C_BLACK}"/>`)),
+  a7:  ()=> svg(triDown(``)),
+  b20: ()=> svg(`<path d="M40 12 H80 L108 40 V80 L80 108 H40 L12 80 V40 Z" fill="${C_RED}" stroke="#a8160f" stroke-width="3"/>
+                 <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="Arial Black,Arial" font-weight="900" font-size="30" fill="#fff">STOP</text>`),
+  b2:  ()=> svg(`<circle cx="60" cy="60" r="52" fill="${C_RED}"/><rect x="26" y="51" width="68" height="18" rx="3" fill="#fff"/>`),
+  b9:  ()=> svg(circBan(bike(C_BLACK,0,0,.78))),
+  b33: ()=> svg(circBan(`<text x="60" y="62" text-anchor="middle" dominant-baseline="central" font-family="Arial Black,Arial" font-weight="900" font-size="42" fill="${C_BLACK}">30</text>`)),
+  c13: ()=> svg(circOrder(bike(C_WHITE,0,0,.80))),
+  c2:  ()=> svg(circOrder(`<path d="M44 78 L44 56 Q44 46 56 46 L72 46" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+                 <path d="M64 34 L86 46 L64 58 Z" fill="#fff"/>`)),
+  d1:  ()=> svg(`<rect x="22" y="22" width="76" height="76" transform="rotate(45 60 60)" fill="#fff" stroke="${C_BLACK}" stroke-width="3"/>
+                 <rect x="34" y="34" width="52" height="52" transform="rotate(45 60 60)" fill="${C_YEL}"/>`),
+  d6:  ()=> svg(sqInfo(`<path d="M60 30 L92 92 L28 92 Z" fill="#fff"/>
+                 ${pedestrian(60,74,0.95,C_BLACK)}
+                 <g fill="${C_BLACK}"><rect x="40" y="90" width="6" height="6"/><rect x="54" y="90" width="6" height="6"/><rect x="68" y="90" width="6" height="6"/></g>`)),
+  d40: ()=> svg(sqInfo(`<path d="M26 50 L42 36 L58 50 Z" fill="#fff"/><rect x="31" y="48" width="22" height="20" fill="#fff"/><rect x="38" y="56" width="8" height="12" fill="${C_BLUE}"/>
+                 ${pedestrian(76,46,0.62,'#fff')}${pedestrian(90,54,0.42,'#fff')}
+                 <g fill="#fff"><rect x="28" y="82" width="40" height="10" rx="4"/><rect x="36" y="76" width="22" height="8" rx="3"/><circle cx="38" cy="93" r="4.5"/><circle cx="60" cy="93" r="4.5"/></g>`)),
+};
+
+/* =================================================================
+   GRAFIKA: SKRZYŻOWANIA (SVG, sterowane konfiguracją)
+   Ruch prawostronny: pas "do góry" jest po prawej (x=108) itd.
+   ================================================================= */
+function arrowHead(x,y,dir,color){
+  // dir: 'up','down','left','right'
+  const m={up:`${x-7},${y+10} ${x+7},${y+10} ${x},${y-2}`,
+           down:`${x-7},${y-10} ${x+7},${y-10} ${x},${y+2}`,
+           left:`${x+10},${y-7} ${x+10},${y+7} ${x-2},${y}`,
+           right:`${x-10},${y-7} ${x-10},${y+7} ${x+2},${y}`}[dir];
+  return `<polygon points="${m}" fill="${color}"/>`;
+}
+// rysuje pojazd jako linię + grot wzdłuż jego trasy (ruch prawostronny)
+function vehicle(from,to,color,label,ego){
+  const w = ego?6:5;
+  const start={S:[108,182],N:[92,18],E:[182,92],W:[18,108]}[from];
+  let path="", hx, hy, hd;
+  if(from==='S'){            // wjazd od dołu, pas x=108
+    if(to==='W'){ path="M108 182 L108 100 Q108 92 100 92 L24 92"; hx=24;hy=92;hd='left'; }
+    else if(to==='E'){ path="M108 182 L108 116 Q108 108 116 108 L176 108"; hx=176;hy=108;hd='right'; }
+    else { path="M108 182 L108 24"; hx=108;hy=24;hd='up'; }
+  } else if(from==='N'){     // wjazd z góry, pas x=92
+    if(to==='E'){ path="M92 18 L92 100 Q92 108 100 108 L176 108"; hx=176;hy=108;hd='right'; }
+    else if(to==='W'){ path="M92 18 L92 84 Q92 92 84 92 L24 92"; hx=24;hy=92;hd='left'; }
+    else { path="M92 18 L92 176"; hx=92;hy=176;hd='down'; }
+  } else if(from==='E'){ path="M182 92 L24 92"; hx=24;hy=92;hd='left'; }
+  else { path="M18 108 L176 108"; hx=176;hy=108;hd='right'; }
+  const txt = label?`<text x="${start[0]}" y="${start[1]+(from==='S'?-6:16)}" text-anchor="middle" font-size="11" font-weight="800" fill="${color}">${label}</text>`:'';
+  return `<g><path d="${path}" fill="none" stroke="${color}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>${arrowHead(hx,hy,hd,color)}${txt}</g>`;
+}
+function miniSign(id,x,y){
+  return `<g transform="translate(${x} ${y})">${SIGNS[id]? SIGNS[id]().replace('width="150" height="150"','width="34" height="34"') : ''}</g>`;
+}
+function intersection(cfg, size){
+  size=size||230;
+  const road = `<rect x="80" y="0" width="40" height="200" fill="#aeb6c0"/>
+                <rect x="0" y="80" width="200" height="40" fill="#aeb6c0"/>
+                <rect x="80" y="80" width="40" height="40" fill="#9aa3ae"/>`;
+  // linie środkowe
+  let center = `<line x1="100" y1="0" x2="100" y2="80" stroke="#fff" stroke-width="2" stroke-dasharray="7 6"/>
+                <line x1="100" y1="120" x2="100" y2="200" stroke="#fff" stroke-width="2" stroke-dasharray="7 6"/>
+                <line x1="0" y1="100" x2="80" y2="100" stroke="#fff" stroke-width="2" stroke-dasharray="7 6"/>
+                <line x1="120" y1="100" x2="200" y2="100" stroke="#fff" stroke-width="2" stroke-dasharray="7 6"/>`;
+  // droga główna na żółto
+  let prio="";
+  if(cfg.priorityRoad==='EW') prio=`<rect x="0" y="80" width="200" height="40" fill="#ffe9a8" opacity=".7"/>`;
+  if(cfg.priorityRoad==='NS') prio=`<rect x="80" y="0" width="40" height="200" fill="#ffe9a8" opacity=".7"/>`;
+
+  let veh = vehicle(cfg.ego.from, cfg.ego.to, '#2f9e44', null, true);
+  (cfg.others||[]).forEach(o=> veh += vehicle(o.from,o.to,o.color||'#e23b3b',o.label||null,false));
+
+  // sylwetka rowerzysty (TY) u dołu
+  const egoMark = `<text x="108" y="196" text-anchor="middle" font-size="16">🚲</text>`;
+
+  let signs="";
+  if(cfg.signsEgo) signs+=miniSign(cfg.signsEgo,120,150);
+  if(cfg.signsOther){ const pos={N:[60,40],S:[120,150],E:[150,60],W:[28,120]};
+    for(const k in cfg.signsOther){ const p=pos[k]; if(cfg.signsOther[k]) signs+=miniSign(cfg.signsOther[k],p[0],p[1]); } }
+
+  return `<svg width="${size}" height="${size}" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="200" height="200" fill="#dff0d8" rx="14"/>
+    ${road}${prio}${center}${veh}${egoMark}${signs}</svg>`;
+}
+
+function renderAsset(asset){
+  if(!asset) return "";
+  if(asset.type==='sign' && SIGNS[asset.signId]) return SIGNS[asset.signId]();
+  if(asset.type==='intersection') return intersection(asset.config);
+  return "";
+}
+
+/* =================================================================
+   BANK PYTAŃ  —  wstrzykiwany automatycznie (zweryfikowany)
+   ================================================================= */
+/* BANK_START */
+const QUESTIONS = [
+  {id:"zasady-1", category:"zasady", kind:"tekst", difficulty:"latwe",
+   question:"Jedziesz rowerem ulicą, na której jest droga dla rowerów. Gdzie powinieneś jechać?",
+   options:["Po drodze dla rowerów", "Po jezdni razem z samochodami", "Po chodniku obok pieszych"], correct:0,
+   explanation:"Jeśli przy drodze jest droga dla rowerów, rowerzysta ma obowiązek z niej korzystać. To najbezpieczniejsze miejsce dla ciebie."},
+  {id:"zasady-2", category:"zasady", kind:"tekst", difficulty:"latwe",
+   question:"Ile lat trzeba mieć najmniej, żeby zdobyć kartę rowerową?",
+   options:["7 lat", "10 lat", "13 lat"], correct:1,
+   explanation:"Kartę rowerową można zdobyć, gdy ma się skończone 10 lat. Wcześniej dziecko może jeździć rowerem po drodze tylko pod opieką dorosłego."},
+  {id:"zasady-3", category:"zasady", kind:"tekst", difficulty:"latwe",
+   question:"Czy rowerem wolno wjechać na autostradę lub drogę ekspresową?",
+   options:["Tak, ale tylko za dnia", "Nie, rowerom tam wjazd jest zabroniony", "Tak, jeśli jedzie się poboczem"], correct:1,
+   explanation:"Autostrady i drogi ekspresowe są tylko dla szybkich pojazdów. Rower nie może tam wjechać - to bardzo niebezpieczne i zakazane."},
+  {id:"zasady-4", category:"zasady", kind:"tekst", difficulty:"srednie",
+   question:"Jedziesz rowerem po zmroku poza miastem. Co musisz mieć włączone?",
+   options:["Tylko biały odblask z przodu", "Światło białe z przodu i czerwone z tyłu", "Nic, wystarczy jasne ubranie"], correct:1,
+   explanation:"Po zmroku rower musi mieć włączone światło białe z przodu i czerwone z tyłu, żebyś był dobrze widoczny dla innych."},
+  {id:"zasady-5", category:"zasady", kind:"tekst", difficulty:"srednie",
+   question:"Wjeżdżasz rowerem do strefy zamieszkania. Kto ma tam pierwszeństwo?",
+   options:["Rowerzysta, bo jedzie szybciej", "Pieszy, który może chodzić całą szerokością drogi", "Samochody, bo są większe"], correct:1,
+   explanation:"W strefie zamieszkania pieszy ma pierwszeństwo i może iść całą szerokością drogi. Rowerzysta musi jechać wolno i ustępować."},
+  {id:"zasady-6", category:"zasady", kind:"tekst", difficulty:"trudne",
+   question:"Na ulicy nie ma drogi dla rowerów ani pobocza, a samochody jadą szybko. Gdzie wyjątkowo wolno jechać dziecku do 10 lat, które prowadzi dorosły opiekun?",
+   options:["Po chodniku", "Środkiem jezdni", "Pod prąd na jezdni"], correct:0,
+   explanation:"Chodnik to wyjątek - rowerem można nim jechać np. wtedy, gdy dorosły opiekuje się dzieckiem do 10 lat. Trzeba jechać wolno i zawsze ustępować pieszym."},
+  {id:"zasady-7", category:"zasady", kind:"tekst", difficulty:"srednie",
+   question:"Jedziecie grupą rowerzystów po drodze. Jak normalnie powinniście jechać?",
+   options:["Jeden za drugim, w rzędzie", "Trójkami obok siebie", "Jak kto chce, bylebyście byli razem"], correct:0,
+   explanation:"Zwykle rowerzyści jadą jeden za drugim. Jazda parami jest dozwolona tylko wtedy, gdy nie utrudnia to ruchu i nie jest niebezpieczna."},
+  {id:"zasady-8", category:"zasady", kind:"tekst", difficulty:"trudne",
+   question:"Twój kolega prosi, żebyś podwiózł go na rowerze. Co mówią o tym przepisy?",
+   options:["Można wozić każdego, kto się zmieści", "Można przewozić dziecko do 7 lat na specjalnym foteliku", "Nie wolno nigdy nikogo wozić"], correct:1,
+   explanation:"Rowerzysta może przewozić dziecko do 7 lat tylko na specjalnym, dobrze zamocowanym foteliku. Dorosłego kolegi na ramie wozić nie wolno."},
+  {id:"manewry-1", category:"manewry", kind:"tekst", difficulty:"latwe",
+   question:"Chcesz skręcić rowerem w lewo. Co powinieneś zrobić, zanim skręcisz?",
+   options:["Wyciągnąć lewą rękę w bok, żeby pokazać, że skręcasz w lewo", "Zadzwonić dzwonkiem trzy razy", "Schylić głowę i jechać szybciej"], correct:0,
+   explanation:"Rowerzysta pokazuje zamiar skrętu wyciągniętą ręką: w lewo wyciągasz lewą rękę, w prawo prawą. Dzięki temu inni wiedzą, co zamierzasz zrobić."},
+  {id:"manewry-2", category:"manewry", kind:"tekst", difficulty:"srednie",
+   question:"Co znaczy 'ustąpić pierwszeństwa' innemu pojazdowi?",
+   options:["Pojechać szybko przed nim, żeby zdążyć", "Nie zmuszać go do zatrzymania się ani zmiany kierunku, czyli przepuścić go", "Zatrąbić i jechać dalej swoją drogą"], correct:1,
+   explanation:"Ustąpić pierwszeństwa to przepuścić innego tak, żeby nie musiał przez Ciebie hamować ani skręcać. Po prostu czekasz, aż przejedzie."},
+  {id:"manewry-3", category:"manewry", kind:"tekst", difficulty:"srednie",
+   question:"Jak nazywa się manewr, gdy mijasz stojącą przeszkodę na drodze, na przykład zaparkowany samochód?",
+   options:["Wyprzedzanie", "Omijanie", "Wymijanie"], correct:1,
+   explanation:"Omijanie to przejeżdżanie obok czegoś, co stoi w miejscu, na przykład zaparkowanego auta albo dziury. Pamiętaj, żeby zachować bezpieczny odstęp."},
+  {id:"manewry-4", category:"manewry", kind:"tekst", difficulty:"trudne",
+   question:"Czym różni się wyprzedzanie od wymijania?",
+   options:["To dokładnie to samo, tylko inne słowa", "Wyprzedzasz pojazd jadący w tę samą stronę co Ty, a wymijasz ten jadący z naprzeciwka", "Wyprzedzanie robi się tylko w nocy, a wymijanie w dzień"], correct:1,
+   explanation:"Wyprzedzasz kogoś, kto jedzie w tym samym kierunku co Ty i jest wolniejszy. Wymijasz pojazd, który jedzie z naprzeciwka, czyli w przeciwną stronę."},
+  {id:"manewry-5", category:"manewry", kind:"tekst", difficulty:"srednie",
+   question:"Wyjeżdżasz rowerem z podwórka na ulicę. To jest włączanie się do ruchu. Co musisz zrobić?",
+   options:["Wjeżdżasz od razu, bo jako rowerzysta masz pierwszeństwo", "Przepuszczasz wszystkie pojazdy, które już jadą ulicą", "Wjeżdżasz szybko, bo inni i tak zdążą wyhamować"], correct:1,
+   explanation:"Kto włącza się do ruchu, na przykład wyjeżdża z podwórka, musi przepuścić wszystkich, którzy już jadą drogą. Najpierw się upewnij, że nikt nie jedzie, a dopiero potem ruszaj."},
+  {id:"manewry-6", category:"manewry", kind:"tekst", difficulty:"latwe",
+   question:"Zanim zaczniesz zawracać albo zmieniać pas, co powinieneś zrobić najpierw?",
+   options:["Upewnić się, patrząc do tyłu i w bok, czy nikt nie nadjeżdża", "Od razu pokazać ręką, w którą stronę skręcasz, i zacząć skręcać", "Zawrócić od razu, bo i tak nikogo nie ma"], correct:0,
+   explanation:"Najpierw zawsze trzeba się rozejrzeć: spojrzeć do tyłu i w bok, czy nikt nie nadjeżdża. Dopiero gdy widzisz, że jest bezpiecznie, pokazujesz ręką, w którą stronę chcesz jechać, i spokojnie wykonujesz manewr."},
+  {id:"wyposazenie-1", category:"wyposazenie", kind:"tekst", difficulty:"latwe",
+   question:"Jakie światło musi mieć rower z przodu?",
+   options:["Białe lub żółte", "Czerwone", "Niebieskie"], correct:0,
+   explanation:"Z przodu roweru świeci się światło białe lub żółte, żeby było Cię dobrze widać i żebyś sam widział drogę."},
+  {id:"wyposazenie-2", category:"wyposazenie", kind:"tekst", difficulty:"latwe",
+   question:"Jakie światło musi być z tyłu roweru?",
+   options:["Białe", "Czerwone", "Żółte"], correct:1,
+   explanation:"Z tyłu świeci czerwone światło - tak jak w samochodzie - dzięki temu kierowcy jadący za Tobą wiedzą, że tam jesteś."},
+  {id:"wyposazenie-3", category:"wyposazenie", kind:"tekst", difficulty:"srednie",
+   question:"Który element NIE jest obowiązkowy w rowerze?",
+   options:["Dzwonek lub inny sygnał", "Lusterko wsteczne", "Sprawny hamulec"], correct:1,
+   explanation:"Lusterko jest przydatne, ale przepisy go nie wymagają. Obowiązkowe są za to dzwonek i sprawny hamulec."},
+  {id:"wyposazenie-4", category:"wyposazenie", kind:"tekst", difficulty:"trudne",
+   question:"Jaki musi być czerwony odblask z tyłu roweru?",
+   options:["Inny niż trójkątny", "Koniecznie trójkątny", "W kształcie gwiazdki"], correct:0,
+   explanation:"Z tyłu roweru montuje się czerwony odblask, ale nie może być trójkątny - trójkątne odblaski są zarezerwowane dla przyczep."},
+  {id:"wyposazenie-5", category:"wyposazenie", kind:"tekst", difficulty:"srednie",
+   question:"Ile sprawnych hamulców musi mieć rower co najmniej?",
+   options:["Żaden, wystarczy zwalniać nogami", "Przynajmniej jeden działający hamulec", "Dokładnie trzy hamulce"], correct:1,
+   explanation:"Rower musi mieć przynajmniej jeden sprawny hamulec, żebyś mógł bezpiecznie i pewnie się zatrzymać."},
+  {id:"pierwsza-pomoc-1", category:"pierwsza-pomoc", kind:"tekst", difficulty:"latwe",
+   question:"Pod jaki numer możesz zadzwonić w KAŻDYM nagłym wypadku, gdy nie wiesz, kogo dokładnie wezwać?",
+   options:["112", "997", "998"], correct:0,
+   explanation:"Numer 112 to ogólny numer alarmowy w całej Europie. Dyspozytor sam skieruje do Ciebie odpowiednie służby."},
+  {id:"pierwsza-pomoc-2", category:"pierwsza-pomoc", kind:"tekst", difficulty:"srednie",
+   question:"Kolega spadł z roweru, jest ranny i nie może sam wstać. Co robisz NAJPIERW?",
+   options:["Sprawdzam, czy w tym miejscu jest bezpiecznie, żeby pomóc bez ryzyka", "Szybko przesuwam go na chodnik, żeby mu było wygodniej", "Daję mu wodę do picia, żeby się lepiej poczuł"], correct:0,
+   explanation:"Zawsze najpierw zadbaj o bezpieczeństwo - swoje i poszkodowanego. Jeśli sam wpadniesz w kłopoty, nikomu nie pomożesz."},
+  {id:"pierwsza-pomoc-3", category:"pierwsza-pomoc", kind:"tekst", difficulty:"latwe",
+   question:"Pod który numer dzwonisz, gdy chcesz wezwać pogotowie ratunkowe (karetkę)?",
+   options:["999", "998", "997"], correct:0,
+   explanation:"Numer 999 to pogotowie ratunkowe. 998 to straż pożarna, a 997 to policja."},
+  {id:"pierwsza-pomoc-4", category:"pierwsza-pomoc", kind:"tekst", difficulty:"srednie",
+   question:"Dzwonisz po pomoc. Co powinieneś powiedzieć dyspozytorowi jako NAJWAŻNIEJSZĄ rzecz?",
+   options:["Gdzie się stał wypadek i co dokładnie się wydarzyło", "Jak masz na imię i ile masz lat", "Jakiego koloru jest Twój rower"], correct:0,
+   explanation:"Najważniejsze jest miejsce wypadku i co się stało - dzięki temu pomoc szybko trafi tam, gdzie jest potrzebna."},
+  {id:"pierwsza-pomoc-5", category:"pierwsza-pomoc", kind:"tekst", difficulty:"trudne",
+   question:"Kiedy można przesunąć osobę poszkodowaną w wypadku z miejsca, w którym leży?",
+   options:["Tylko gdy grozi jej dodatkowe niebezpieczeństwo, np. nadjeżdżające auto", "Zawsze od razu, żeby nie leżała na ziemi", "Nigdy - trzeba czekać, aż sama wstanie"], correct:0,
+   explanation:"Poszkodowanego nie ruszamy bez potrzeby, bo możemy pogorszyć urazy. Przesuwamy go tylko wtedy, gdy w danym miejscu grozi mu kolejne niebezpieczeństwo."},
+  {id:"bezpieczenstwo-1", category:"bezpieczenstwo", kind:"tekst", difficulty:"latwe",
+   question:"Od 3 czerwca 2026 roku kask rowerowy jest obowiązkowy dla:",
+   options:["wszystkich rowerzystów, bez względu na wiek", "osób, które nie ukończyły 16 lat", "tylko dla dorosłych powyżej 18 lat"], correct:1,
+   explanation:"Od 3 czerwca 2026 kask muszą nosić osoby, które nie ukończyły 16 lat. Starsi też powinni go nosić, ale nie mają takiego obowiązku."},
+  {id:"bezpieczenstwo-2", category:"bezpieczenstwo", kind:"tekst", difficulty:"latwe",
+   question:"Dlaczego warto mieć na rowerze i ubraniu elementy odblaskowe?",
+   options:["bo dzięki nim rower jedzie szybciej", "bo są ładne i kolorowe", "bo o zmierzchu i w nocy dzięki nim kierowcy szybciej Cię zauważą"], correct:2,
+   explanation:"Odblaski odbijają światło reflektorów, dlatego rowerzysta staje się widoczny z dużej odległości, gdy jest ciemno lub szaro."},
+  {id:"bezpieczenstwo-3", category:"bezpieczenstwo", kind:"tekst", difficulty:"srednie",
+   question:"Gdzie powinien jechać rowerzysta na jezdni, jeśli nie ma drogi dla rowerów?",
+   options:["środkiem jezdni, żeby dobrze go było widać", "blisko prawej krawędzi jezdni", "blisko lewej krawędzi, naprzeciw samochodów"], correct:1,
+   explanation:"Rowerzysta jedzie możliwie blisko prawej krawędzi jezdni. Dzięki temu samochody mogą go bezpiecznie wyprzedzić."},
+  {id:"bezpieczenstwo-4", category:"bezpieczenstwo", kind:"tekst", difficulty:"srednie",
+   question:"Czy podczas jazdy rowerem można słuchać muzyki przez słuchawki na obu uszach?",
+   options:["nie, bo wtedy nie słychać, co dzieje się na drodze", "tak, jeśli muzyka gra cicho", "tak, ale tylko na drodze dla rowerów"], correct:0,
+   explanation:"Słuchawki na obu uszach zagłuszają klaksony, inne rowery i pojazdy. Trzeba dobrze słyszeć, co dzieje się wokół, dlatego jest to zabronione."},
+  {id:"bezpieczenstwo-5", category:"bezpieczenstwo", kind:"tekst", difficulty:"trudne",
+   question:"Co zrobić, gdy w czasie jazdy zadzwoni Twój telefon schowany w kieszeni?",
+   options:["odebrać jedną ręką, trzymając kierownicę drugą", "zatrzymać się w bezpiecznym miejscu i dopiero wtedy go wyjąć", "jechać szybciej, żeby szybciej dojechać i oddzwonić"], correct:1,
+   explanation:"Trzymanie telefonu w ręce podczas jazdy jest zabronione, bo odbiera kontrolę nad rowerem. Najpierw bezpiecznie się zatrzymaj, a dopiero potem sięgnij po telefon."},
+  {id:"znaki-ogolne-1", category:"znaki-ogolne", kind:"tekst", difficulty:"latwe",
+   question:"Jak wygląda znak ostrzegawczy, który ma cię przygotować na niebezpieczeństwo na drodze?",
+   options:["Żółty trójkąt z czerwoną obwódką", "Niebieskie koło z białym rysunkiem", "Białe koło z czerwoną obwódką"], correct:0,
+   explanation:"Znaki ostrzegawcze to żółte trójkąty z czerwoną obwódką. Ostrzegają cię przed czymś, na co trzeba uważać, na przykład przed zakrętem albo dziećmi na drodze."},
+  {id:"znaki-ogolne-2", category:"znaki-ogolne", kind:"tekst", difficulty:"latwe",
+   question:"Spotykasz okrągły znak: białe koło z grubą czerwoną obwódką. Do jakiej grupy on należy?",
+   options:["To znak informacyjny, który coś podpowiada", "To znak zakazu, który mówi, czego nie wolno robić", "To znak nakazu, który mówi, co trzeba zrobić"], correct:1,
+   explanation:"Białe koło z czerwoną obwódką to znak zakazu. Zabrania czegoś, na przykład wjazdu albo skręcania w prawo."},
+  {id:"znaki-ogolne-3", category:"znaki-ogolne", kind:"tekst", difficulty:"srednie",
+   question:"Znaki nakazu mają kształt niebieskiego koła. Co takie znaki ci mówią?",
+   options:["Że czegoś nie wolno robić", "Że masz coś zrobić, na przykład jechać prosto albo skręcić w nakazanym kierunku", "Że ostrzegają cię przed niebezpieczeństwem"], correct:1,
+   explanation:"Znaki nakazu (niebieskie koła) mówią, co trzeba zrobić, na przykład w którą stronę jechać. Zakazu jest co innego: tam czegoś nie wolno."},
+  {id:"znaki-ogolne-4", category:"znaki-ogolne", kind:"tekst", difficulty:"srednie",
+   question:"Dojeżdżasz do skrzyżowania, gdzie świeci się żółte światło sygnalizatora. Co powinieneś zrobić?",
+   options:["Szybko przejechać, zanim zapali się czerwone", "Przygotować się do zatrzymania, bo zaraz będzie czerwone", "Jechać dalej spokojnie, bo żółte znaczy to samo co zielone"], correct:1,
+   explanation:"Żółte światło to sygnał, że zaraz zapali się czerwone. Oznacza zakaz wjazdu za sygnalizator i mówi: przygotuj się do zatrzymania."},
+  {id:"znaki-ogolne-5", category:"znaki-ogolne", kind:"tekst", difficulty:"trudne",
+   question:"Na skrzyżowaniu stoi policjant kierujący ruchem i ręką pokazuje ci, żebyś jechał. W tym samym czasie sygnalizator świeci czerwonym światłem. Co zrobisz?",
+   options:["Posłucham policjanta i pojadę, bo jego polecenia są ważniejsze niż światła", "Zatrzymam się na czerwonym i nie ruszę, bo światła są zawsze najważniejsze", "Poczekam, aż światło zmieni się na zielone, i dopiero wtedy posłucham policjanta"], correct:0,
+   explanation:"Polecenia osoby kierującej ruchem, na przykład policjanta, są ważniejsze niż światła i znaki drogowe. Jeśli policjant pokazuje ci ręką, żebyś jechał, słuchasz jego, a nie czerwonego światła."},
+  {id:"znak-a17", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "a17"},
+   question:"Co oznacza ten znak?",
+   options:["Uwaga, dzieci - w pobliżu mogą wejść na drogę, jedź wolno", "Tu jest plac zabaw", "Zakaz wjazdu dla dzieci"], correct:0,
+   explanation:"Żółty trójkąt to znak ostrzegawczy. Ten ostrzega, że blisko są dzieci (np. przy szkole), więc trzeba zwolnić i być gotowym do hamowania."},
+  {id:"znak-a24", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "a24"},
+   question:"Co oznacza ten znak?",
+   options:["Uwaga, rowerzyści - w tym miejscu mogą pojawić się na drodze", "Droga tylko dla rowerów", "Zakaz jazdy rowerem"], correct:0,
+   explanation:"To znak ostrzegawczy - poznasz go po żółtym trójkącie z czerwoną obwódką. Ostrzega kierowców, że w tym miejscu na drodze mogą pojawić się rowerzyści, więc trzeba uważać. Niebieskie koło z rowerem to \"droga dla rowerów\", a białe koło z czerwoną obwódką to \"zakaz jazdy rowerem\" - to inne znaki."},
+  {id:"znak-a30", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "a30"},
+   question:"Co oznacza ten znak? (żółty trójkąt z czerwoną obwódką, w środku czarny wykrzyknik)",
+   options:["Inne niebezpieczeństwo - bądź ostrożny", "Koniec drogi", "Stacja benzynowa"], correct:0,
+   explanation:"Wykrzyknik w trójkącie ostrzega o niebezpieczeństwie, którego nie da się pokazać innym znakiem. Trzeba uważać."},
+  {id:"znak-a7", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "a7"},
+   question:"Co oznacza ten znak?",
+   options:["Ustąp pierwszeństwa", "Zakaz zatrzymywania", "Droga z pierwszeństwem"], correct:0,
+   explanation:"To znak \"ustąp pierwszeństwa\". Musisz przepuścić pojazdy jadące drogą, do której dojeżdżasz."},
+  {id:"znak-b20", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "b20"},
+   question:"Co musisz zrobić, gdy widzisz ten znak?",
+   options:["Całkowicie się zatrzymać i ustąpić pierwszeństwa", "Tylko trochę zwolnić", "Skręcić w prawo"], correct:0,
+   explanation:"Znak STOP nakazuje zatrzymanie się - nawet jeśli nic nie jedzie - i ustąpienie pierwszeństwa."},
+  {id:"znak-b2", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "b2"},
+   question:"Co oznacza ten znak?",
+   options:["Zakaz wjazdu", "Nakaz jazdy prosto", "Tędy można wjechać"], correct:0,
+   explanation:"Ten znak mówi, że tędy nie wolno wjechać. Czerwone koło z białą belką to znak \"zakaz wjazdu\" - trzeba poszukać innej drogi."},
+  {id:"znak-b9", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "b9"},
+   question:"Co oznacza ten znak?",
+   options:["Zakaz wjazdu rowerów", "Droga dla rowerów", "Parking dla rowerów"], correct:0,
+   explanation:"Białe koło z czerwoną obwódką to znak zakazu. Tu nie wolno wjechać rowerem."},
+  {id:"znak-b33", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "b33"},
+   question:"Co oznacza ten znak?",
+   options:["Maksymalna prędkość 30 km/h", "Minimalna prędkość 30 km/h", "Do końca drogi zostało 30 km"], correct:0,
+   explanation:"To znak zakazu - ogranicza prędkość. Nie wolno jechać szybciej niż podana liczba kilometrów na godzinę."},
+  {id:"znak-c13", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "c13"},
+   question:"Co oznacza ten znak?",
+   options:["Droga dla rowerów - tędy muszą jechać rowerzyści", "Zakaz wjazdu rowerów", "Uwaga, rowerzyści"], correct:0,
+   explanation:"Niebieski znak w kształcie koła to znak nakazu - coś każe nam zrobić. Ten pokazuje drogę dla rowerów, czyli specjalną ścieżkę, po której jeżdżą rowerzyści. Jeśli taka droga jest obok, rowerem jedziemy właśnie po niej."},
+  {id:"znak-c2", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "c2"},
+   question:"Co oznacza ten znak?",
+   options:["Musisz pojechać w prawo", "Nie wolno skręcać w prawo", "Droga kończy się po prawej stronie"], correct:0,
+   explanation:"Niebieskie koło z białą strzałką to znak nakazu. Strzałka wygięta w prawo mówi, że musisz pojechać w prawo. Gdyby to był zakaz, znak miałby czerwoną obwódkę."},
+  {id:"znak-d1", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "d1"},
+   question:"Co oznacza ten znak?",
+   options:["Droga z pierwszeństwa", "Ustąp pierwszeństwa", "Koniec drogi z pierwszeństwem"], correct:0,
+   explanation:"Ten znak mówi, że jedziesz drogą z pierwszeństwem - pojazdy z dróg bocznych muszą Ci ustąpić."},
+  {id:"znak-d6", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "d6"},
+   question:"Co oznacza ten znak?",
+   options:["Przejście dla pieszych", "Zakaz ruchu pieszych", "Droga tylko dla pieszych"], correct:0,
+   explanation:"To znak informacyjny: tu jest przejście dla pieszych. Zwolnij i przepuść pieszych."},
+  {id:"znak-d40", category:"znaki-wizualne", kind:"znak", difficulty:"srednie",
+   asset:{"type": "sign", "signId": "d40"},
+   question:"Co oznacza ten znak?",
+   options:["Strefa zamieszkania - pieszy ma pierwszeństwo na całej drodze, a ty jedziesz bardzo wolno (najwyżej 20 km/h)", "Plac zabaw", "Parking osiedlowy"], correct:0,
+   explanation:"W strefie zamieszkania pieszy (także dziecko) ma pierwszeństwo na całej szerokości drogi - może iść środkiem. Dlatego trzeba jechać bardzo wolno, najwyżej 20 km/h, i uważnie obserwować, czy ktoś nie wejdzie na drogę."},
+  {id:"skrz-1", category:"pierwszenstwo", kind:"skrzyzowanie", difficulty:"trudne",
+   asset:{"type": "intersection", "config": {"ego": {"from": "S", "to": "N"}, "others": [{"from": "E", "to": "W", "color": "#e23b3b", "label": "auto"}], "signsEgo": null, "priorityRoad": null}},
+   question:"Kto ma pierwszeństwo?",
+   options:["Samochód z prawej strony - ja muszę ustąpić", "Ja, bo jadę prosto", "Ja, bo rower jest zawsze pierwszy"], correct:0,
+   explanation:"Na skrzyżowaniu równorzędnym ustępuje się pojazdowi nadjeżdżającemu z prawej strony. To zasada prawej ręki."},
+  {id:"skrz-2", category:"pierwszenstwo", kind:"skrzyzowanie", difficulty:"trudne",
+   asset:{"type": "intersection", "config": {"ego": {"from": "S", "to": "N"}, "others": [{"from": "W", "to": "E", "color": "#e23b3b", "label": "auto"}], "signsEgo": null, "priorityRoad": null}},
+   question:"Czy masz pierwszeństwo?",
+   options:["Tak - z mojej prawej strony nikt nie nadjeżdża", "Nie, samochód jest zawsze pierwszy", "Nie, bo rower zawsze ustępuje samochodom"], correct:0,
+   explanation:"Ustępujesz tylko pojazdom z prawej strony. Samochód z lewej to Tobie musi ustąpić."},
+  {id:"skrz-3", category:"pierwszenstwo", kind:"skrzyzowanie", difficulty:"trudne",
+   asset:{"type": "intersection", "config": {"ego": {"from": "S", "to": "N"}, "others": [{"from": "E", "to": "W", "color": "#e23b3b", "label": "auto"}], "signsEgo": "d1", "signsOther": {"E": "a7"}, "priorityRoad": "NS"}},
+   question:"Kto przejedzie pierwszy?",
+   options:["Ja – jadę drogą z pierwszeństwem", "Samochód z prawej", "Nie wiadomo, trzeba się dogadać"], correct:0,
+   explanation:"Przejedziesz pierwszy Ty. Masz znak „droga z pierwszeństwem”, a samochód z prawej ma znak „ustąp pierwszeństwa”. Gdy na skrzyżowaniu stoją znaki, to one decydują o pierwszeństwie – dlatego zwykła zasada „kto z prawej, ten pierwszy” tutaj nie obowiązuje."},
+  {id:"skrz-4", category:"pierwszenstwo", kind:"skrzyzowanie", difficulty:"trudne",
+   asset:{"type": "intersection", "config": {"ego": {"from": "S", "to": "N"}, "others": [{"from": "W", "to": "E", "color": "#e23b3b", "label": "auto"}], "signsEgo": "a7", "signsOther": {"W": "d1", "E": "d1"}, "priorityRoad": "EW"}},
+   question:"Co robisz?",
+   options:["Ustępuję i przepuszczam samochód", "Jadę pierwszy, bo jadę prosto", "Dzwonię dzwonkiem i wjeżdżam"], correct:0,
+   explanation:"Znak „ustąp pierwszeństwa” nakazuje przepuścić pojazdy na drodze z pierwszeństwem."},
+  {id:"skrz-5", category:"pierwszenstwo", kind:"skrzyzowanie", difficulty:"trudne",
+   asset:{"type": "intersection", "config": {"ego": {"from": "S", "to": "N"}, "others": [{"from": "E", "to": "W", "color": "#e23b3b", "label": "auto"}], "signsEgo": "b20", "signsOther": {"E": "d1"}, "priorityRoad": "EW"}},
+   question:"Co musisz zrobić?",
+   options:["Całkowicie się zatrzymać, a potem ustąpić pierwszeństwa", "Tylko zwolnić i jechać dalej", "Nic, jeśli akurat nic nie jedzie"], correct:0,
+   explanation:"Przy znaku STOP zawsze trzeba się zatrzymać (nawet gdy droga wydaje się pusta) i ustąpić pierwszeństwa."},
+  {id:"skrz-6", category:"pierwszenstwo", kind:"skrzyzowanie", difficulty:"trudne",
+   asset:{"type": "intersection", "config": {"ego": {"from": "S", "to": "W"}, "others": [{"from": "N", "to": "S", "color": "#e23b3b", "label": "auto"}], "signsEgo": null, "priorityRoad": null}},
+   question:"Kto ma pierwszeństwo?",
+   options:["Samochód z naprzeciwka jadący prosto", "Ja, bo skręcam", "Ja, bo jestem mniejszy i wolniejszy"], correct:0,
+   explanation:"Skręcając w lewo, musisz przepuścić pojazdy jadące z naprzeciwka na wprost."},
+  {id:"extra-prawa-reka", category:"pierwszenstwo", kind:"tekst", difficulty:"trudne",
+   question:"Dojeżdżasz rowerem do skrzyżowania, na którym nie ma żadnych znaków ani sygnalizatora. Z prawej strony zbliża się samochód. Kto ma pierwszeństwo?",
+   options:["Samochód, bo nadjeżdża z mojej prawej strony – muszę go przepuścić", "Ja, bo rower jest mniejszy i zwinniejszy", "Ten, kto pierwszy zatrąbi"], correct:0,
+   explanation:"Gdy na skrzyżowaniu nie ma znaków ani świateł, obowiązuje „reguła prawej ręki”: przepuszczasz tego, kto jedzie z Twojej prawej strony. Samochód jest po prawej, więc to on ma pierwszeństwo i musisz poczekać."},
+  {id:"extra-przejscie-piesi", category:"zasady", kind:"tekst", difficulty:"srednie",
+   question:"Jedziesz rowerem i zbliżasz się do przejścia dla pieszych, na które właśnie wchodzą ludzie. Co powinieneś zrobić?",
+   options:["Zatrzymać się i przepuścić pieszych – oni mają pierwszeństwo na przejściu", "Szybko przejechać przed nimi, zanim wejdą dalej", "Zadzwonić dzwonkiem, żeby zeszli mi z drogi"], correct:0,
+   explanation:"Piesi, którzy weszli lub wchodzą na przejście dla pieszych, mają pierwszeństwo. Jako rowerzysta musisz zwolnić i zatrzymać się, a potem spokojnie przepuścić wszystkich pieszych. Dzwonek nie służy do poganiania ludzi, a wyprzedzanie ich w ostatniej chwili jest bardzo niebezpieczne."},
+  {id:"extra-tramwaj", category:"pierwszenstwo", kind:"tekst", difficulty:"srednie",
+   question:"Dojeżdżasz rowerem do skrzyżowania, na którym nie ma żadnych znaków ani sygnalizacji świetlnej. Z lewej strony nadjeżdża tramwaj. Kto ma pierwszeństwo?",
+   options:["Tramwaj – na takim skrzyżowaniu zawsze przepuszczamy tramwaj", "Ja, bo rower jest mniejszy i bardziej zwrotny", "Nikt, możemy przejechać jednocześnie"], correct:0,
+   explanation:"Na skrzyżowaniu bez znaków i bez sygnalizacji (czyli równorzędnym) tramwaj zawsze ma pierwszeństwo – nawet gdyby nadjeżdżał z prawej strony. Dlatego zatrzymaj się i przepuść go. Tramwaj jest ciężki i jedzie tylko po torach, więc nie zjedzie ci z drogi – to ty musisz uważać."},
+  {id:"extra-znak-stop", category:"znaki-ogolne", kind:"tekst", difficulty:"srednie",
+   question:"Dojeżdżasz do znaku STOP (biały napis STOP na czerwonym, ośmiokątnym tle). Co musisz zrobić?",
+   options:["Całkowicie się zatrzymać, a potem ustąpić pierwszeństwa i ruszyć, gdy jest bezpiecznie", "Tylko zwolnić i jechać dalej, jeśli nikogo nie widać", "Zatrąbić i przejechać bez zatrzymywania"], correct:0,
+   explanation:"Znak STOP nakazuje pełne zatrzymanie - nie wystarczy zwolnić. Trzeba stanąć przed linią, rozejrzeć się, ustąpić pierwszeństwa innym i dopiero gdy droga jest wolna, ruszyć."},
+  {id:"extra-trzezwosc", category:"bezpieczenstwo", kind:"tekst", difficulty:"latwe",
+   question:"Czy można jechać rowerem po wypiciu alkoholu albo będąc bardzo zmęczonym i sennym?",
+   options:["Nie - alkohol i silne zmęczenie spowalniają reakcje, więc jazda jest niebezpieczna i zabroniona", "Tak, na rowerze to nie ma znaczenia", "Tak, ale tylko wolno i blisko domu"], correct:0,
+   explanation:"Alkohol i silne zmęczenie sprawiają, że gorzej widzisz, wolniej reagujesz i łatwo o wypadek. Rowerem, tak jak każdym pojazdem, nie wolno jechać po alkoholu. Gdy jesteś bardzo zmęczony - odpocznij, zanim wsiądziesz."},
+  {id:"extra-kask-po-co", category:"bezpieczenstwo", kind:"tekst", difficulty:"latwe",
+   question:"Od 3 czerwca 2026 roku dzieci muszą jeździć w kasku. Przed czym przede wszystkim chroni kask rowerowy?",
+   options:["Chroni głowę przed urazem przy upadku lub uderzeniu", "Chroni przed deszczem i słońcem", "Chroni ręce i kolana przed zadrapaniami"], correct:0,
+   explanation:"Kask amortyzuje uderzenie i chroni głowę, w której jest mózg - to najważniejsze, by uniknąć poważnego urazu przy upadku. Dlatego od 3 czerwca 2026 jest obowiązkowy dla osób poniżej 16 lat. Kask musi być dobrze dopasowany i zapięty pod brodą."},
+  {id:"trap-pierwszenstwo-g0-1", category:"pierwszenstwo", kind:"tekst", difficulty:"srednie",
+   question:"Jedziesz rowerem i zbliżasz się do skrzyżowania. Czy to prawda, że rowerzysta zawsze ma pierwszeństwo przed samochodami?",
+   options:["Tak, rower jest słabszy, więc zawsze ma pierwszeństwo", "Nie, rowerzysta jest takim samym uczestnikiem ruchu i też musi przestrzegać zasad pierwszeństwa", "Tak, ale tylko gdy rowerzysta ma na sobie kask"], correct:1,
+   explanation:"Rowerzysta podlega tym samym zasadom pierwszeństwa co inne pojazdy - czasem ma pierwszeństwo, a czasem musi ustąpić. To, że rower jest mniejszy i słabszy, nie daje mu żadnego przywileju. Kask (obowiązkowy dla dzieci poniżej 16 lat od 3 czerwca 2026) chroni głowę, ale nie ma nic wspólnego z pierwszeństwem."},
+  {id:"trap-pierwszenstwo-g0-2", category:"pierwszenstwo", kind:"tekst", difficulty:"trudne",
+   question:"Na skrzyżowaniu sygnalizacja świetlna pokazuje zielone światło, ale stojący tam policjant ręką nakazuje Ci się zatrzymać. Co robisz?",
+   options:["Jadę dalej, bo świeci się zielone światło", "Zatrzymuję się, bo polecenie policjanta jest ważniejsze niż światło", "Sam wybieram, czy słuchać policjanta, czy światła"], correct:1,
+   explanation:"Polecenia policjanta kierującego ruchem są ważniejsze niż sygnalizacja świetlna i niż znaki drogowe. Dlatego trzeba się zatrzymać, mimo że świeci się zielone światło. Pułapka polega na tym, że ufamy zielonemu światłu, gdy policjant pokazuje co innego."},
+  {id:"trap-pierwszenstwo-g0-3", category:"pierwszenstwo", kind:"tekst", difficulty:"trudne",
+   question:"Jedziesz rowerem przez skrzyżowanie na zielonym świetle. Z boku nadjeżdża karetka pogotowia na sygnale dźwiękowym i z włączonymi niebieskimi światłami. Co powinieneś zrobić?",
+   options:["Jadę dalej, bo mam zielone światło i to ja mam pierwszeństwo", "Ustępuję pierwszeństwa i jeśli mogę, zjeżdżam na bok, żeby karetka mogła przejechać", "Zatrzymuję się na środku skrzyżowania i czekam, aż karetka przejedzie"], correct:1,
+   explanation:"Pojazdowi uprzywilejowanemu na sygnale (karetka, straż pożarna, policja) zawsze trzeba ustąpić pierwszeństwa i ułatwić przejazd - najlepiej zjechać na bok i zatrzymać się. Dotyczy to każdego uczestnika ruchu, także rowerzysty, nawet jeśli sam ma zielone światło. Zielone światło nie daje pierwszeństwa nad karetką. Zatrzymanie się na środku skrzyżowania jest złe, bo zablokowałoby karetce przejazd."},
+  {id:"trap-pierwszenstwo-g0-4", category:"pierwszenstwo", kind:"tekst", difficulty:"trudne",
+   question:"Dojeżdżasz rowerem do skrzyżowania równorzędnego (bez znaków i bez świateł). Z Twojej LEWEJ strony nadjeżdża tramwaj. Kto ma pierwszeństwo?",
+   options:["Ja, bo tramwaj jedzie z lewej, a pojazdom z lewej nie ustępuje się pierwszeństwa", "Tramwaj, bo na skrzyżowaniu równorzędnym ma pierwszeństwo nawet jadąc z lewej strony", "Ten, kto pierwszy wjedzie na skrzyżowanie"], correct:1,
+   explanation:"Na skrzyżowaniu równorzędnym tramwaj ma pierwszeństwo przed innymi pojazdami niezależnie od tego, z której strony nadjeżdża - także z lewej. Pułapka: mechaniczne stosowanie zasady prawej ręki, która nie dotyczy tramwaju."},
+  {id:"trap-znaki-ogolne-g1-1", category:"znaki-ogolne", kind:"tekst", difficulty:"trudne",
+   question:"Widzisz okrągły znak: białe tło, czerwona obwódka i czarny rysunek roweru w środku. Co on oznacza?",
+   options:["Zakaz wjazdu rowerów - tu nie wolno jechać rowerem", "Nakaz jazdy drogą dla rowerów - tu trzeba jechać rowerem", "Uwaga, w pobliżu często jeżdżą rowerzyści"], correct:0,
+   explanation:"Okrągły znak z białym tłem i czerwoną obwódką to znak zakazu (B-9). Skoro w środku jest rower, oznacza zakaz wjazdu rowerów. Pułapka: sam rysunek roweru nie znaczy \"tu jedź rowerem\" - o tym, czy to zakaz, nakaz czy ostrzeżenie, decydują kształt i kolor znaku. Nakaz jazdy drogą dla rowerów to znak niebieski (C-13), a ostrzeżenie to żółty trójkąt."},
+  {id:"trap-znaki-ogolne-g1-2", category:"znaki-ogolne", kind:"tekst", difficulty:"trudne",
+   question:"Okrągły znak ma niebieskie tło, a w środku biały rysunek roweru. Co oznacza dla rowerzysty?",
+   options:["Nie wolno mi tu wjechać rowerem, bo to zakaz", "To droga dla rowerów i muszę nią jechać, a nie jezdnią czy chodnikiem", "Mogę tędy jechać, ale nie muszę - to tylko podpowiedź"], correct:1,
+   explanation:"Niebieski okrągły znak to ZNAK NAKAZU. Rower w białym kolorze oznacza drogę dla rowerów (znak C-13), z której rowerzysta MUSI korzystać - nie wolno mu wtedy jechać jezdnią ani chodnikiem. Pułapka: ten sam rysunek roweru widnieje na znaku zakazu, ale tam jest na białym tle w czerwonej obwódce i znaczy \"nie wolno\". To niebieski kolor i okrągły kształt zmieniają znaczenie z \"nie wolno\" na \"trzeba\"."},
+  {id:"trap-znaki-ogolne-g1-3", category:"znaki-ogolne", kind:"tekst", difficulty:"srednie",
+   question:"Na sygnalizatorze świeci się ŻÓŁTE światło (po zielonym, przed czerwonym). Co powinieneś zrobić na rowerze?",
+   options:["Przyspieszyć, żeby zdążyć przejechać przed czerwonym", "Przygotować się do zatrzymania, bo zaraz będzie czerwone", "Jechać dalej spokojnie, bo żółte znaczy 'można jechać'"], correct:1,
+   explanation:"Żółte światło ostrzega, że zaraz zapali się czerwone - trzeba przygotować się do zatrzymania, a nie przyspieszać. Pułapka: żółte NIGDY nie znaczy \"dodaj gazu\" - przyspieszanie na żółtym jest niebezpieczne i niezgodne z przepisami."},
+  {id:"trap-znaki-ogolne-g1-4", category:"znaki-ogolne", kind:"tekst", difficulty:"srednie",
+   question:"Zbliżasz się do skrzyżowania i widzisz, że zielone światło zaczyna migać. Co to znaczy i co robisz?",
+   options:["Zielone miga, więc wszystko działa normalnie - jadę dalej bez zmian", "Migające zielone znaczy 'jedź szybciej', więc przyspieszam", "Za chwilę będzie czerwone - jeśli mogę bezpiecznie się zatrzymać, zatrzymuję się"], correct:2,
+   explanation:"Migające zielone światło to znak, że zielone zaraz zgaśnie i pojawi się czerwone. Jeśli jesteś jeszcze daleko i możesz bezpiecznie się zatrzymać - zatrzymaj się. Pułapka: miganie nie znaczy 'przyspiesz' - to ostrzeżenie, że czas na przejazd się kończy."},
+  {id:"trap-zasady-g2-1", category:"zasady", kind:"tekst", difficulty:"trudne",
+   question:"Jedziesz rowerem chodnikiem i dojeżdżasz do przejścia dla pieszych (pasy). Chcesz dostać się na drugą stronę jezdni. Co robisz?",
+   options:["Zsiadam z roweru i przeprowadzam go przez pasy, idąc obok niego", "Przejeżdżam przez pasy rowerem, bo na pasach pieszy ma pierwszeństwo, więc ja też", "Przejeżdżam szybko rowerem, żeby nie blokować samochodów"], correct:0,
+   explanation:"Zwykłe przejście dla pieszych (pasy) jest przeznaczone tylko dla pieszych - rowerem nie wolno przez nie przejechać. Aby zgodnie z przepisami dostać się na drugą stronę, rowerzysta musi zsiąść i przeprowadzić rower obok siebie; staje się wtedy pieszym. Uwaga na pułapkę: przejście dla pieszych to nie to samo co przejazd dla rowerów, na którym można jechać. Pierwszeństwo pieszego na pasach nie obejmuje rowerzysty jadącego na rowerze."},
+  {id:"trap-zasady-g2-2", category:"zasady", kind:"tekst", difficulty:"srednie",
+   question:"Twój 8-letni brat ma fajny rower i chce sam pojechać drogą do sklepu. Czy może to zrobić zgodnie z przepisami?",
+   options:["Tak, jeśli umie dobrze jeździć i zna drogę", "Nie - dziecko poniżej 10 lat jest traktowane jak pieszy i może jechać tylko pod opieką osoby, która ma co najmniej 10 lat", "Tak, ale tylko po chodniku i nigdy po jezdni"], correct:1,
+   explanation:"Dziecko poniżej 10 lat na rowerze jest w przepisach traktowane jak pieszy i nie może jechać samo - musi być pod opieką osoby, która ma co najmniej 10 lat (np. starszego rodzeństwa lub dorosłego). Pułapka: o tym, czy można jechać samemu, decyduje wiek i opieka, a nie to, jak dobrze ktoś jeździ."},
+  {id:"trap-zasady-g2-3", category:"zasady", kind:"tekst", difficulty:"srednie",
+   question:"Pod górkę jest ciężko, a obok jedzie wolno traktor z przyczepą. Kolega mówi: złap się przyczepy, to cię podciągnie. Co jest zgodne z przepisami?",
+   options:["Mogę się złapać na chwilę, jeśli jadę ostrożnie", "Mogę się złapać, ale tylko gdy jadę bardzo wolno", "Nie wolno - rowerzyście zabrania się czepiania i trzymania się innych pojazdów w czasie jazdy"], correct:2,
+   explanation:"Czepianie się i trzymanie innych pojazdów podczas jazdy jest zabronione, bo jest bardzo niebezpieczne. Pułapka: nawet jeśli wydaje się to wygodne i \"tylko na chwilę\" albo gdy jedziesz wolno, przepisy zakazują tego zawsze."},
+  {id:"trap-zasady-g2-4", category:"zasady", kind:"tekst", difficulty:"trudne",
+   question:"Na prostej, pustej drodze chcesz pokazać kolegom jazdę \"bez trzymanki\" - bez rąk na kierownicy. Czy wolno Ci tak jechać?",
+   options:["Tak, jeśli droga jest prosta, pusta i jest dobra pogoda", "Nie - rowerzysta musi trzymać na kierownicy przynajmniej jedną rękę i mieć nogi na pedałach", "Tak, ale tylko przez kilka sekund i bardzo powoli"], correct:1,
+   explanation:"Przepisy wymagają, aby rowerzysta trzymał na kierownicy co najmniej jedną rękę oraz miał nogi na pedałach - musisz mieć pełną kontrolę nad rowerem. Pusta i prosta droga tego nie zmienia, zakaz obowiązuje zawsze."},
+  {id:"trap-zasady-g2-5", category:"zasady", kind:"tekst", difficulty:"trudne",
+   question:"Jedziesz rowerem i chcesz posłuchać muzyki przez słuchawki na obu uszach albo szybko spojrzeć na telefon trzymany w ręce. Co jest dozwolone podczas jazdy?",
+   options:["Nic z tego - podczas jazdy nie wolno korzystać z telefonu trzymanego w ręce, a słuchawki na obu uszach zagłuszają dźwięki i są niebezpieczne", "Słuchawki na obu uszach są w porządku, bo to tylko muzyka i nie przeszkadza w jeździe", "Telefon w ręce jest w porządku, jeśli tylko zerknę na chwilę i jadę prosto"], correct:0,
+   explanation:"Trzymanie telefonu w ręce podczas jazdy jest zabronione, a słuchawki na obu uszach zagłuszają klaksony i nadjeżdżające pojazdy, więc są bardzo niebezpieczne. Pułapka: \"tylko muzyka\" albo \"tylko na chwilę\" nie czyni tego bezpiecznym - tracisz słuch i kontrolę nad rowerem."},
+  {id:"trap-bezpieczenstwo-g3-1", category:"bezpieczenstwo", kind:"tekst", difficulty:"trudne",
+   question:"Masz 11 lat i jeździsz już pewnie na rowerze. Od 3 czerwca 2026 roku obowiązują nowe przepisy o kasku. Co jest prawdą?",
+   options:["Kask musi nosić każdy, kto ma mniej niż 16 lat, więc Ciebie też to dotyczy", "Kask jest obowiązkowy tylko dla małych dzieci, np. 5-6 lat, a Ty jesteś już duży", "Kask jest potrzebny tylko podczas nauki jazdy, a kiedy umiesz już jeździć, nie musisz go zakładać"], correct:0,
+   explanation:"Od 3 czerwca 2026 roku kask jest obowiązkowy dla każdego, kto nie skończył jeszcze 16 lat - czyli także dla Ciebie, mimo że jeździsz już pewnie. Umiejętność jazdy nie chroni głowy podczas upadku - przed urazem chroni dopiero kask."},
+  {id:"trap-bezpieczenstwo-g3-2", category:"bezpieczenstwo", kind:"tekst", difficulty:"trudne",
+   question:"Pada deszcz i droga jest mokra oraz śliska. Jak powinieneś jechać i hamować w porównaniu z jazdą po suchej drodze?",
+   options:["Tak samo jak zwykle, bo hamulce działają przecież cały czas identycznie", "Jechać wolniej i zaczynać hamować wcześniej, bo na mokrej drodze rower zatrzymuje się po dłuższej drodze", "Jechać szybciej, żeby krócej być na śliskiej drodze i szybciej dojechać do celu"], correct:1,
+   explanation:"Na mokrej i śliskiej drodze opony mają mniejszą przyczepność, koło częściej ślizga się po podłożu, więc rower hamuje na dłuższej drodze. Dlatego trzeba jechać wolniej i zaczynać hamować wcześniej. Pułapka to przekonanie, że hamulce zawsze zatrzymują rower tak samo szybko, niezależnie od pogody - to nieprawda, bo o drodze hamowania decyduje także przyczepność do nawierzchni."},
+  {id:"trap-bezpieczenstwo-g3-3", category:"bezpieczenstwo", kind:"tekst", difficulty:"srednie",
+   question:"Jedziesz rowerem za innym pojazdem, który porusza się przed Tobą. Jaki odstęp powinieneś od niego zachować?",
+   options:["Jechać jak najbliżej, niemal tuż za nim, żeby nikt się nie wcisnął między was", "Zachować bezpieczny odstęp taki, abyś zdążył się zatrzymać, gdyby pojazd z przodu nagle zahamował", "Odstęp nie ma znaczenia - liczy się tylko to, żeby patrzeć na drogę przed sobą"], correct:1,
+   explanation:"Należy zachować taki odstęp, by zdążyć bezpiecznie się zatrzymać, gdyby jadący z przodu nagle zahamował. Pułapka to przekonanie, że jazda tuż za kimś jest bezpieczna - przy nagłym hamowaniu nie zdążysz wtedy wyhamować i wjedziesz w ten pojazd."},
+  {id:"trap-zasady-g4-1", category:"zasady", kind:"tekst", difficulty:"trudne",
+   question:"Jedziesz rowerem i dojeżdżasz do przejazdu dla rowerzystów (czerwone pasy w poprzek jezdni). Nie ma tam żadnej sygnalizacji świetlnej. Jezdnią jedzie samochód. Co robisz?",
+   options:["Wjeżdżam śmiało, bo na przejeździe dla rowerzystów rower zawsze ma pierwszeństwo przed samochodem", "Zwalniam, upewniam się, że samochód mnie przepuszcza, i dopiero wtedy wjeżdżam - rower ma tu pierwszeństwo jak pieszy na pasach", "Zatrzymuję się i ustępuję pierwszeństwa samochodowi - przed wjazdem na przejazd muszę przepuścić pojazdy jadące jezdnią"], correct:2,
+   explanation:"Sam przejazd dla rowerzystów NIE daje rowerzyście pierwszeństwa. Wjeżdżając na niego, masz obowiązek zachować szczególną ostrożność i ustąpić pierwszeństwa pojazdom jadącym jezdnią (chyba że sygnalizacja mówi inaczej). Pułapka: dzieci myślą, że przejazd dla rowerzystów działa jak przejście dla pieszych, gdzie kierowca musi przepuścić - a tu jest odwrotnie."},
+  {id:"trap-zasady-g4-2", category:"zasady", kind:"tekst", difficulty:"srednie",
+   question:"Dojeżdżasz rowerem do przejścia dla pieszych (białe pasy, czyli zebra) - nie ma obok niego osobnego przejazdu dla rowerzystów. Chcesz przedostać się na drugą stronę jezdni. Jak zrobić to prawidłowo?",
+   options:["Przejeżdżam przez zebrę na rowerze, tak samo jak przez przejazd dla rowerzystów", "Zsiadam z roweru i przeprowadzam go przez przejście, idąc obok niego jak pieszy", "Przejeżdżam szybko na rowerze, ale dzwonię dzwonkiem, żeby ostrzec pieszych"], correct:1,
+   explanation:"Przejście dla pieszych (zebra) jest przeznaczone tylko dla pieszych - rowerzysta nie może przez nie przejechać. Musi zsiąść z roweru i przeprowadzić go obok siebie, bo wtedy traktowany jest jak pieszy. Czym innym jest przejazd dla rowerzystów (oznaczony osobnymi liniami) - tylko po nim wolno przejechać na rowerze. Dzwonek niczego nie zmienia: jazda przez zebrę jest niedozwolona bez względu na to, czy ostrzeżesz pieszych."},
+  {id:"trap-znak-c13", category:"znaki-wizualne", kind:"znak", difficulty:"trudne",
+   asset:{"type": "sign", "signId": "c13"},
+   question:"Widzisz ten znak. Co on naprawdę oznacza?",
+   options:["Nakaz - musisz jechać drogą dla rowerów", "Zakaz - nie wolno tu wjeżdżać rowerem", "Ostrzeżenie - uwaga na rowerzystów"], correct:0,
+   explanation:"Niebieskie koło to znak nakazu. Rower na nim oznacza znak C-13 droga dla rowerów, czyli \"jedź drogą dla rowerów\". Gdyby tło było białe z czerwoną obwódką, byłby to zakaz - i to częsta pomyłka."},
+  {id:"trap-znak-b9", category:"znaki-wizualne", kind:"znak", difficulty:"trudne",
+   asset:{"type": "sign", "signId": "b9"},
+   question:"Czy możesz wjechać rowerem tam, gdzie stoi ten znak?",
+   options:["Nie - to znak zakazu wjazdu rowerów", "Tak - to droga dla rowerów", "Tak, ale tylko prowadząc rower obok siebie"], correct:0,
+   explanation:"Białe koło z czerwoną obwódką to znak zakazu (B-9 \"zakaz wjazdu rowerów\"). Tam w ogóle nie wolno wjechać rowerem. Drogę dla rowerów oznacza inny znak: niebieskie koło z białym rowerem - i to on pozwalałby tam jechać."},
+  {id:"trap-znak-d1", category:"znaki-wizualne", kind:"znak", difficulty:"trudne",
+   asset:{"type": "sign", "signId": "d1"},
+   question:"Jedziesz rowerem i widzisz żółty kwadrat ustawiony na rogu (romb) z białą obwódką. Masz pierwszeństwo czy musisz ustąpić?",
+   options:["Mam pierwszeństwo - to droga z pierwszeństwem", "Muszę ustąpić innym", "Muszę się całkowicie zatrzymać"], correct:0,
+   explanation:"Żółty kwadrat stojący na rogu (romb) z białą obwódką to znak \"droga z pierwszeństwem\". Oznacza on, że to inni muszą Ci ustąpić. Łatwo go pomylić ze znakiem \"ustąp pierwszeństwa\", który ma kształt trójkąta skierowanego wierzchołkiem w dół."},
+  {id:"trap-znak-b20", category:"znaki-wizualne", kind:"znak", difficulty:"trudne",
+   asset:{"type": "sign", "signId": "b20"},
+   question:"Pokazany znak: czerwony ośmiokąt z napisem STOP. Na skrzyżowaniu akurat nic nie jedzie. Skoro nic nie jedzie, czy możesz nie zatrzymywać się przy znaku STOP?",
+   options:["Nie - przy znaku STOP zawsze trzeba się całkowicie zatrzymać", "Tak, skoro droga jest pusta", "Wystarczy mocno zwolnić"], correct:0,
+   explanation:"Znak STOP zawsze nakazuje całkowite zatrzymanie pojazdu - nawet gdy droga wygląda na pustą i nic nie jedzie. Trzeba się zatrzymać przed skrzyżowaniem (albo przed grubą białą linią, jeśli jest namalowana na jezdni), sprawdzić, czy jest bezpiecznie, i dopiero potem ruszyć. Samo mocne zwolnienie nie wystarcza."},
+];
+/* BANK_END */
+
+/* =================================================================
+   SILNIK EGZAMINU
+   ================================================================= */
+const $=s=>document.querySelector(s);
+const screens={start:$('#screen-start'),quiz:$('#screen-quiz'),result:$('#screen-result')};
+function show(name){ for(const k in screens) screens[k].classList.toggle('hidden',k!==name); window.scrollTo(0,0); }
+
+const CAT_LABEL={
+  'zasady':'Zasady ruchu','manewry':'Manewry','wyposazenie':'Wyposażenie roweru',
+  'pierwsza-pomoc':'Pierwsza pomoc','bezpieczenstwo':'Bezpieczeństwo','znaki-ogolne':'Znaki',
+  'znaki-wizualne':'Znaki drogowe','pierwszenstwo':'Pierwszeństwo'
+};
+
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+// stratyfikowane losowanie ~jak na egzaminie (znaki i zasady częściej)
+function pickExam(n){
+  const targets={'znaki-wizualne':5,'znaki-ogolne':3,'zasady':5,'pierwszenstwo':4,'manewry':3,'wyposazenie':2,'pierwsza-pomoc':2,'bezpieczenstwo':2};
+  const byCat={}; QUESTIONS.forEach(q=>{(byCat[q.category]=byCat[q.category]||[]).push(q);});
+  for(const k in byCat) byCat[k]=shuffle(byCat[k]);
+  let out=[];
+  for(const k in targets){ const want=targets[k]; const have=byCat[k]||[]; out=out.concat(have.slice(0,want)); }
+  // dopełnij/przytnij do n z całej puli
+  if(out.length<n){ const ids=new Set(out.map(q=>q.id)); const rest=shuffle(QUESTIONS.filter(q=>!ids.has(q.id))); out=out.concat(rest.slice(0,n-out.length)); }
+  return shuffle(out).slice(0,n);
+}
+function pickFrom(filterFn,n){ const pool=shuffle(QUESTIONS.filter(filterFn)); return pool.slice(0,Math.min(n,pool.length)); }
+
+// stan
+let exam=[], idx=0, answers=[], streak=0, maxStreak=0, currentMode='exam';
+
+function startMode(mode){
+  currentMode=mode;
+  if(mode==='exam') exam=pickExam(Math.min(25,QUESTIONS.length));
+  else if(mode==='quick') exam=shuffle(QUESTIONS).slice(0,Math.min(10,QUESTIONS.length));
+  else if(mode==='signs') exam=pickFrom(q=>q.category==='znaki-wizualne'||q.category==='znaki-ogolne',999);
+  else if(mode==='priority') exam=pickFrom(q=>q.category==='pierwszenstwo',999);
+  startExam(exam);
+}
+function startExam(list){
+  exam=list.map(q=>{ // przetasuj opcje, przelicz correct
+    const order=shuffle([0,1,2]);
+    return {...q,_opts:order.map(i=>q.options[i]),_correct:order.indexOf(q.correct)};
+  });
+  idx=0; answers=[]; streak=0; maxStreak=0;
+  show('quiz'); renderQ();
+}
+
+function renderQ(){
+  const q=exam[idx];
+  $('#counter').textContent=`Pytanie ${idx+1} / ${exam.length}`;
+  $('#streak').textContent=`🔥 ${streak} z rzędu`;
+  $('#bike').style.left=(6+ (idx/Math.max(1,exam.length))*88)+'%';
+  $('#qcat').textContent=CAT_LABEL[q.category]||q.category;
+  $('#assetbox').innerHTML=renderAsset(q.asset);
+  $('#qtext').textContent=q.question;
+  const opts=$('#opts'); opts.innerHTML='';
+  q._opts.forEach((text,i)=>{
+    const b=document.createElement('button');
+    b.className='opt'; b.dataset.i=i;
+    b.innerHTML=`<span class="key">${i+1}</span><span>${text}</span>`;
+    b.onclick=()=>answer(i);
+    opts.appendChild(b);
+  });
+  const fb=$('#feedback'); fb.className='feedback'; fb.classList.remove('show');
+  $('#next').classList.add('hidden');
+  $('#next').textContent = (idx===exam.length-1)?'Zobacz wynik 🏁':'Dalej →';
+}
+
+function answer(i){
+  const q=exam[idx];
+  if(answers[idx]!==undefined) return; // już odpowiedziano
+  const correct=q._correct;
+  answers[idx]=i;
+  const good=i===correct;
+  if(good){ streak++; maxStreak=Math.max(maxStreak,streak);} else streak=0;
+  $('#streak').textContent=`🔥 ${streak} z rzędu`;
+  // oznacz opcje
+  document.querySelectorAll('.opt').forEach(b=>{
+    const bi=+b.dataset.i; b.classList.add('locked');
+    if(bi===correct) b.classList.add('correct');
+    else if(bi===i) b.classList.add('wrong');
+  });
+  // feedback
+  const fb=$('#feedback');
+  fb.classList.add('show', good?'good':'bad');
+  const cheersGood=['Świetnie! 🎉','Brawo! 👏','Tak jest! ✅','Super! 🚀','Pięknie! 🌟'];
+  const cheersBad=['Prawie! 💪','Nic straconego — zapamiętaj to.','Następne pójdzie lepiej!','Już wiesz na przyszłość. 👍'];
+  $('#fhead').textContent = good ? cheersGood[Math.floor(Math.random()*cheersGood.length)]
+                                 : cheersBad[Math.floor(Math.random()*cheersBad.length)];
+  $('#fbody').innerHTML = (good?'':`<b>Poprawna odpowiedź:</b> ${q._opts[correct]}<br>`)+q.explanation;
+  $('#next').classList.remove('hidden');
+  $('#next').focus();
+}
+
+function nextQ(){
+  if(answers[idx]===undefined) return;
+  if(idx<exam.length-1){ idx++; renderQ(); }
+  else finish();
+}
+
+function finish(){
+  const total=exam.length;
+  const correct=exam.reduce((s,q,i)=>s+(answers[i]===q._correct?1:0),0);
+  const pct=Math.round(correct/total*100);
+  const pass=correct/total>=0.8;
+  $('#rpct').textContent=pct+'%';
+  $('#rsub').textContent=`${correct} / ${total} pytań`;
+  $('#ring').style.background=`conic-gradient(${pass?'#27ae60':'#f0a500'} ${pct*3.6}deg, #e6eefb 0)`;
+  const v=$('#verdict'); v.textContent= pass?'ZDANE! 🏅':'Jeszcze trochę 💪';
+  v.className='verdict '+(pass?'pass':'fail');
+  $('#rmsg').textContent= pass
+    ? (pct===100?'Komplet punktów! Jesteś gotowy na egzamin. 🚲💨':'Gratulacje — przekroczyłeś próg 80%. Tak trzymaj!')
+    : `Do zdania trzeba 80% (czyli ${Math.ceil(total*0.8)} z ${total}). Powtórz błędy i spróbuj jeszcze raz — na pewno dasz radę!`;
+  $('#pillok').textContent=`✓ ${correct} poprawnych`;
+  $('#pillbad').textContent=`✗ ${total-correct} błędnych`;
+  // najlepszy wynik
+  try{ const best=+(localStorage.getItem('kr_best')||0); if(pct>best) localStorage.setItem('kr_best',pct);}catch(e){}
+  buildReview();
+  show('result');
+  if(pass) confetti();
+}
+
+function buildReview(){
+  const wrongs=exam.map((q,i)=>({q,i})).filter(o=>answers[o.i]!==o.q._correct);
+  const box=$('#review');
+  if(!wrongs.length){ box.innerHTML='<h2>Bez błędów — perfekcyjnie! 🌟</h2>'; return; }
+  box.innerHTML='<h2 style="text-align:left">Twoje błędy — warto powtórzyć:</h2>';
+  wrongs.forEach(({q,i})=>{
+    const mini = q.asset ? `<div class="miniasset">${renderAsset(q.asset)}</div>` : '';
+    const el=document.createElement('div'); el.className='rev';
+    el.innerHTML=`${mini}<div class="rq">${q.question}</div>
+      <div class="line yours">Twoja odpowiedź: ${q._opts[answers[i]]}</div>
+      <div class="line right">Poprawna: ${q._opts[q._correct]}</div>
+      <div class="why">💡 ${q.explanation}</div><div style="clear:both"></div>`;
+    box.appendChild(el);
+  });
+}
+
+function confetti(){
+  const box=$('#confetti'); box.innerHTML='';
+  const colors=['#ffd21e','#43b85f','#4aa3ff','#e23b3b','#9b59b6','#ff7f50'];
+  for(let i=0;i<90;i++){
+    const d=document.createElement('div'); d.className='conf';
+    d.style.left=Math.random()*100+'vw';
+    d.style.top=(-10-Math.random()*20)+'vh';
+    d.style.background=colors[i%colors.length];
+    d.style.animationDuration=(2.5+Math.random()*2)+'s';
+    d.style.animationDelay=(Math.random()*0.6)+'s';
+    box.appendChild(d);
+  }
+  setTimeout(()=>box.innerHTML='',5200);
+}
+
+/* ---- podpięcie zdarzeń ---- */
+document.querySelectorAll('#modes .mode').forEach(b=> b.onclick=()=>startMode(b.dataset.mode));
+$('#next').onclick=nextQ;
+$('#again').onclick=()=>startMode(currentMode);
+$('#redo').onclick=()=>{
+  const wrongs=exam.filter((q,i)=>answers[i]!==q._correct);
+  if(!wrongs.length){ startMode(currentMode); return; }
+  startExam(wrongs);
+};
+$('#home').onclick=()=>{ refreshBest(); show('start'); };
+
+document.addEventListener('keydown',e=>{
+  if(!screens.quiz.classList.contains('hidden')){
+    if(['1','2','3'].includes(e.key)){ const i=+e.key-1; const b=document.querySelector(`.opt[data-i="${i}"]`); if(b&&answers[idx]===undefined) answer(i); }
+    if((e.key==='Enter'||e.key===' ')&&!$('#next').classList.contains('hidden')){ e.preventDefault(); nextQ(); }
+  }
+});
+
+function refreshBest(){
+  let best=0; try{best=+(localStorage.getItem('kr_best')||0);}catch(e){}
+  $('#bestbox').innerHTML = best>0 ? `<div class="best">🏅 Twój najlepszy wynik: ${best}%</div>`:'';
+}
+refreshBest();
+show('start');
+</script>
+</body>
+</html>
