@@ -752,6 +752,7 @@ function startExam(list){
 
 function renderQ(){
   const q=exam[idx];
+  window.scrollTo({top:0,behavior:'smooth'}); // pokaż całe pytanie od góry po przejściu dalej
   $('#counter').textContent=`Pytanie ${idx+1} / ${exam.length}`;
   $('#streak').textContent=`🔥 ${streak} z rzędu`;
   $('#bike').style.left=(6+ (idx/Math.max(1,exam.length))*88)+'%';
